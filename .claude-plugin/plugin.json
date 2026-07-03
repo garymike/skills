@@ -1,0 +1,13 @@
+{
+  "name": "garymike-skills",
+  "version": "0.1.0",
+  "description": "A growing collection of practical Agent Skills. Currently: github-profile (design, build, and deploy a GitHub profile README).",
+  "author": {
+    "name": "Michael",
+    "url": "https://github.com/garymike"
+  },
+  "homepage": "https://github.com/garymike/skills",
+  "repository": "https://github.com/garymike/skills",
+  "license": "MIT",
+  "keywords": ["skills", "agent-skills", "claude", "developer-tools"]
+}
