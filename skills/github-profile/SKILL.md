@@ -66,6 +66,18 @@ projects, the audience they are writing for (recruiters vs. open-source peers
 vs. clients). A profile aimed at hiring managers reads very differently from one
 aimed at fellow maintainers. If you do not know the audience, ask.
 
+**Privacy guard — check repo visibility before you list anything.** When you
+enumerate repos to draw on (e.g. `gh repo list`), the authenticated owner's view
+includes *private* repos. Never surface a private repo's name, description, or
+existence in a public README without the user explicitly asking for it. Default
+to public repos only. Get the visibility flag up front:
+
+```
+gh repo list <username> --json name,description,visibility,isFork
+```
+
+and treat anything not `PUBLIC` as off-limits unless the user confirms otherwise.
+
 ---
 
 ## 2. Interview the style
@@ -102,14 +114,24 @@ A profile is only as good as its substance. Collect, in the user's own voice:
 - **Identity line** — one sentence on who they are and what they do. This is the
   most-read line on the page; make it specific, not "passionate developer".
 - **Focus areas** — what they actually work on now, and what they want more of.
+- **Signature achievements** — 2 to 5 concrete wins, ideally quantified (impact,
+  scale, adoption), not a duties list. "Cut build times 40%" beats "worked on
+  performance". Skip this rather than pad it with vague filler.
 - **Featured work** — 2 to 5 repos or projects, each with a one-line "why it
-  matters". Real links.
+  matters". Real links. **Public repos only by default** (see the privacy guard
+  in §1); confirm before featuring anything private, and never leak a private
+  repo's name or description.
 - **Tech** — the tools worth signaling (only what is true and relevant; a wall
   of every language they touched once is noise).
+- **Credentials** — degrees, certifications, or notable awards, if they are
+  relevant to the audience. Omit when they add nothing.
+- **Collaboration** — what they are open to: contributions, mentoring, speaking,
+  consulting, hiring conversations. A specific invitation reads better than a
+  generic "open to opportunities".
 - **Contact / links** — site, LinkedIn, and any professional handles they want
   public. Ask before publishing any contact detail.
-- **Optional flavor** — current learning, collaborations sought, a human touch
-  (music, sport, a hobby) if it fits the audience.
+- **Optional flavor** — current learning or a human touch (music, sport, a
+  hobby) if it fits the audience.
 
 Write copy that sounds like a person, not a template. Match the user's phrasing
 and their existing writing style if you have samples. Avoid filler adjectives.
@@ -133,6 +155,9 @@ Assembly rules that keep profiles from looking generic:
   banner is genuinely good.
 - **Every badge must mean something.** Skip badges for skills they would not
   want to be interviewed on.
+- **Prefer quantified impact over adjectives.** "Cut build times 40%" beats
+  "passionate about performance". Numbers and outcomes read as senior; filler
+  adjectives read as generic.
 - **Prefer real links over decoration.** A visitor should reach the work in one
   click.
 - **Alt text on every image**, and keep the page readable with images blocked
