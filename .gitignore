@@ -4,3 +4,7 @@ __pycache__/
 *.log
 .venv/
 node_modules/
+
+# Local-only staging area for private skills — never pushed to the public repo.
+# Develop/stage skills here; move a folder up into skills/ when ready to publish.
+private/
