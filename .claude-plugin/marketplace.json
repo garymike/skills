@@ -4,15 +4,15 @@
     "name": "Michael",
     "url": "https://github.com/garymike"
   },
-  "version": "0.1.0",
-  "description": "Michael's personal Agent Skills. Straight from the .claude directory.",
+  "version": "0.2.0",
+  "description": "A growing collection of practical Agent Skills. Currently: github-profile (design, build, and deploy a GitHub profile README) and github-security-audit (audit and harden GitHub account and repositories).",
   "plugins": [
     {
       "name": "garymike-skills",
       "source": "./",
-      "version": "0.1.0",
-      "description": "A growing collection of practical Agent Skills. Currently: github-profile (design, build, and deploy a GitHub profile README).",
-      "keywords": ["skills", "agent-skills", "claude", "developer-tools"]
+      "version": "0.2.0",
+      "description": "A growing collection of practical Agent Skills. Currently: github-profile (design, build, and deploy a GitHub profile README) and github-security-audit (audit and harden GitHub account and repositories).",
+      "keywords": ["skills", "agent-skills", "claude", "developer-tools", "security"]
     }
   ]
 }
