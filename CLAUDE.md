@@ -29,3 +29,12 @@ Notes for me (and any agent) on how skills in this repo are built and organized.
 ## Adding a skill
 
 The fastest path is Anthropic's `skill-creator` skill: it scaffolds `SKILL.md`, helps you test it on real prompts, and packages a `.skill` file. Drop the resulting folder under `skills/`, add a line to the README reference, and bump the version in the two `.claude-plugin/*.json` files.
+
+## Releases
+
+Track releases so the repo history matches the manifest version:
+
+- The `version` in both `.claude-plugin/*.json` files is the source of truth. Bump it (semver) for any user-facing skill change.
+- Record the change in `CHANGELOG.md` under a new version heading (Keep a Changelog format) in the same commit as the bump.
+- Tag the release commit `vX.Y.Z` (annotated) so `git tag` matches the manifest. Tag on `main` after the change merges, not on a feature branch.
+- Cut a GitHub Release for the tag (`gh release create vX.Y.Z`), reusing that version's `CHANGELOG.md` entry as the notes, so the Releases page mirrors the changelog.
