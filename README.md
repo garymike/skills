@@ -23,7 +23,7 @@ Or install a single skill by hand:
 
 ```bash
 git clone https://github.com/garymike/skills
-cp -r skills/skills/github-profile ~/.claude/skills/github-profile
+cp -r skills/skills/github-security-audit ~/.claude/skills/github-security-audit
 ```
 
 ## Reference
@@ -35,6 +35,8 @@ Skills split on one axis: who can invoke them. **User-invoked** skills run only 
 **Model-invoked**
 
 - **[github-profile](skills/github-profile/SKILL.md)** — Design, build, refresh, and deploy a GitHub profile README (the special `username/username` repo). Runs a style interview, composes from a section and badge library, deploys via the GitHub API behind a confirm gate, and offers opt-in automation add-ons.
+
+- **[github-security-audit](skills/github-security-audit/SKILL.md)** — Audit a GitHub account and all repositories for security misconfigurations, then fix findings interactively. Covers Dependabot, secret scanning, branch protection, Actions permissions, action version pinning, CodeQL, SECURITY.md, and visibility intent. Pairs with [garymike/security-workflows](https://github.com/garymike/security-workflows) (reusable GHA enforcement) and [garymike/repo-template](https://github.com/garymike/repo-template) (pre-wired new repo template) for a full defense-in-depth setup.
 
 More skills land here as I build them.
 
