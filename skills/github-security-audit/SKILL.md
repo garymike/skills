@@ -50,11 +50,30 @@ Run all checks per active non-fork repo. Run in parallel where possible.
 
 ## Reporting findings
 
-Present a table with repo × check. Group findings by severity:
+Always use this exact three-section structure — do not deviate:
 
+### Section 1 — Summary table (repo × check)
+
+One row per active non-fork repo. Columns in this order:
+
+| Repo | Visibility | Dependabot alerts | Auto-fix | Actions perms | Branch protection | Secret scanning | security.yml | SECURITY.md | repo-metadata.yml | Delete-on-merge |
+
+Use ✅ / ❌ / ⚠️ in each cell. Add a short inline note where context helps (e.g. "read-only", "native", "gitleaks", "n/a (Pro)", "mismatch"). Use footnotes (¹ ²) for exceptions that need more explanation. This table is the first thing the user sees.
+
+### Section 2 — Findings by severity
+
+After the table, list findings grouped under **High**, **Medium**, and **Low** headers. Each finding is a bullet with: what's wrong, which repos are affected, and one-line explanation of impact. Skip a severity group if there are no findings in it.
+
+Severity definitions:
 - **High** — Dependabot off, secrets hardcoded in public repo, 2FA not confirmed, push protection off on public repo
-- **Medium** — No branch protection on public repos, gitleaks missing on private repos, Actions permissions not read-only, unpinned action versions
-- **Low** — Delete-on-merge off, no SECURITY.md, CodeQL not enabled, stale public repos
+- **Medium** — No branch protection on public repos, gitleaks missing on private repos, Actions permissions not read-only, unpinned action versions, missing `security.yml` on repos that should have it
+- **Low** — Delete-on-merge off, no SECURITY.md, CodeQL not enabled, stale public repos, missing `repo-metadata.yml`
+
+### Section 3 — Proposed fixes table
+
+One row per distinct fix. Columns: **Fix** | **Repos** | **Cost**. Only list free fixes unless the user has pre-approved paid ones. End with a one-line note: "Say the word and I'll batch-apply the free fixes (or a subset)."
+
+Then add the account-level manual reminder (2FA, OAuth apps, PATs, SSH keys) as a brief bulleted list after the table.
 
 ## Fixing findings
 
