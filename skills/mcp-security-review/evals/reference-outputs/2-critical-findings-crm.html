@@ -1,0 +1,365 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Security Assessment — crm_mcp</title><style>
+:root { --paper:#e9e3d6; --panel:#fdfbf7; --ink:#2c2a25; --muted:#6f685c;
+        --line:#e4ded2; --accent:#766152; --accent-soft:#efeae0; }
+* { box-sizing:border-box; }
+body { font:16px/1.62 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       color:var(--ink); background:var(--paper); margin:0; padding:30px 16px; }
+.wrap { max-width:840px; margin:0 auto; }
+
+.cover, .block { background:var(--panel); border:1px solid var(--line); border-radius:10px;
+                 padding:24px 28px; margin:0 0 16px; }
+.exec { background:#dce3ed; border:2px solid #9bb0cb; }
+.recs { background:#e3e9d8; border:2px solid #a7b988; }
+h1 { font-size:27px; margin:0 0 2px; letter-spacing:-.01em; }
+h2 { font-size:13px; text-transform:uppercase; letter-spacing:.09em; color:var(--muted);
+     margin:0 0 14px; display:flex; align-items:center; gap:8px; }
+h2::before { content:""; width:9px; height:9px; border-radius:2px; background:var(--accent); }
+h3 { font-size:15.5px; margin:0; }
+p { margin:0 0 12px; } p:last-child { margin-bottom:0; }
+a { color:var(--accent); text-decoration:none; }
+small, .muted { color:var(--muted); }
+code, pre, .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.eyebrow { text-transform:uppercase; letter-spacing:.12em; font-size:11.5px; color:var(--muted); margin:0 0 6px; }
+.sub { color:var(--muted); font-size:13.5px; margin:2px 0 0; }
+.source { display:inline-block; margin-top:7px; font-size:13px; color:var(--accent);
+          font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; word-break:break-all; }
+.prov { margin-top:10px; font-size:12.5px; line-height:1.7; }
+.prov-label { display:inline-block; color:#fff; font-size:10px; font-weight:700; text-transform:uppercase;
+              letter-spacing:.05em; padding:2px 9px; border-radius:20px; margin-right:9px; vertical-align:middle; }
+.prov-signals { color:var(--muted); vertical-align:middle; }
+.subhead { color:var(--muted); font-size:12px; margin:16px 0 5px; text-transform:uppercase; letter-spacing:.06em; }
+
+.cover-top { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; flex-wrap:wrap; }
+.cover-id { flex:1 1 340px; min-width:0; }
+.cover-outcome { flex:0 0 auto; display:flex; flex-direction:column; gap:8px; align-items:flex-end; }
+.orow { display:flex; align-items:center; gap:10px; }
+.olabel { font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); }
+.pill { display:inline-block; color:#fff; font-weight:700; letter-spacing:.02em; padding:6px 12px;
+        border-radius:6px; font-size:12.5px; min-width:130px; text-align:center; }
+.profile { display:grid; grid-template-columns:repeat(auto-fit,minmax(195px,1fr)); gap:6px 30px;
+           margin:18px 0 0; padding:15px 0 0; border-top:1px solid var(--line); font-size:13.5px; }
+.profile .k { color:var(--muted); }
+.profile .v { font-weight:600; }
+
+.chips { margin:0 0 14px; }
+.chip { display:inline-flex; align-items:center; font-size:12px; font-weight:600; padding:3px 12px 3px 4px;
+        border-radius:20px; margin:0 7px 7px 0; border:1px solid var(--line); color:var(--muted); background:#fff; }
+.chip.n0 { opacity:.5; }
+.chip b { display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto;
+          width:18px; height:18px; border-radius:50%; color:#fff; font-size:11px; margin-right:6px; }
+.topf-list { list-style:none; margin:0 0 6px; padding:0; }
+.topf-list li { display:flex; justify-content:space-between; align-items:baseline; gap:14px; padding:2px 0; }
+.topf-ref { white-space:nowrap; }
+
+.anchor { font-size:12.5px; color:var(--muted); border-top:1px solid var(--line); margin-top:14px; padding-top:10px; }
+.anchor span { display:inline-block; margin-right:16px; }
+.anchor code { color:var(--ink); }
+
+.rec { display:flex; align-items:center; gap:11px; font-size:15px; }
+.rec + .rec { margin-top:12px; padding-top:12px; border-top:1px solid #d2dcc0; }
+.rec .n { flex:0 0 auto; width:24px; height:24px; border-radius:50%;
+          background:var(--accent); color:#fff; font-size:13px; font-weight:700;
+          display:flex; align-items:center; justify-content:center; }
+.rec .rectext { flex:1; }
+.rec .refs { color:var(--muted); font-size:12.5px; }
+
+.finding { background:#fbf9f4; border:1px solid var(--line); border-left-width:5px; border-radius:8px;
+           padding:16px 18px; margin:0 0 14px; }
+.finding:last-child { margin-bottom:0; }
+.finding-head { display:flex; align-items:center; justify-content:space-between; gap:9px; flex-wrap:wrap; margin-bottom:4px; }
+.finding-tags { display:flex; gap:7px; flex-wrap:wrap; }
+.sev { color:#fff; font-weight:700; font-size:11px; letter-spacing:.05em; padding:3px 8px; border-radius:5px; }
+.fid { font-weight:700; color:var(--accent); font-size:13px; letter-spacing:.03em; text-transform:uppercase; }
+.finding-title { font-size:15.5px; margin:0 0 12px; }
+.finding-div { border:none; border-top:1px solid var(--line); margin:0 0 12px; }
+.badge { font-size:11px; padding:2px 8px; border-radius:5px; border:1px solid var(--line);
+         color:var(--muted); background:#fff; }
+.badge.confirmed { border-color:#5f7150; color:#5f7150; }
+.badge.observed { border-color:#97793d; color:#97793d; }
+.cvss { font-size:11px; font-weight:600; color:var(--ink); background:var(--accent-soft); padding:2px 8px; border-radius:5px; }
+dl.kv { display:grid; grid-template-columns:100px 1fr; gap:7px 14px; margin:0; font-size:14.5px; }
+dl.kv dt { color:var(--muted); font-size:13px; }
+dl.kv dd { margin:0; }
+dl.kv2 { display:grid; grid-template-columns:140px 1fr; gap:7px 14px; margin:0; font-size:14px; }
+dl.kv2 dt { color:var(--muted); font-size:13px; }
+dl.kv2 dd { margin:0; }
+.subsection { margin:16px 0 0; padding:16px 0 0; border-top:1px solid var(--line); }
+.subsection:first-child { margin-top:0; padding-top:0; border-top:none; }
+.subsection .subhead { margin:0 0 8px; }
+.subhead .dot { display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:7px; vertical-align:middle; }
+.caps-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px 28px; }
+.cap { margin:0; }
+.cap-head { display:flex; align-items:center; gap:9px; margin-bottom:2px; }
+.cap-head code { font-weight:600; font-size:14px; }
+.cap-class { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+             background:#615a4e; color:#fff; border-radius:4px; padding:2px 8px; }
+.cap-class.destructive { background:#7a4a3e; }
+.cap-fn { font-size:14px; }
+.cap-anno { font-size:12.5px; color:var(--muted); margin-top:2px; }
+pre.evidence { background:#efeae0; color:#403a30; border:1px solid #e0d9cb; padding:10px 12px;
+               border-radius:6px; font-size:12.5px; overflow-x:auto; white-space:pre-wrap; margin:0; }
+.controls code { background:var(--accent-soft); color:#5a4a37; padding:1px 6px; border-radius:4px; font-size:12px; margin-right:4px; }
+
+table { border-collapse:collapse; width:100%; font-size:14px; margin:4px 0; }
+th, td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+tr:last-child td, tr:last-child th { border-bottom:none; }
+.risk-table { table-layout:fixed; }
+.risk-table th, .risk-table td { width:50%; }
+.composite-row td, .composite-row th { background:#efe9db; border-top:1px solid #d8d0bf; }
+.composite-row th { color:var(--ink); font-weight:700; text-transform:none; font-size:14px; letter-spacing:0; }
+.composite-row td { font-size:15px; }
+
+.disclaimer { font-size:13px; color:#5c564b; background:#f4f0e7; border:1px solid var(--line); border-radius:8px; padding:14px 16px; }
+details.appendix summary { cursor:pointer; color:var(--muted); font-size:13px; font-weight:600; user-select:none; }
+details.appendix pre { background:#f6f3ec; border:1px solid var(--line); border-radius:8px; padding:14px;
+                       font-size:12px; overflow-x:auto; margin-top:12px; }
+.footer { color:var(--muted); font-size:12px; text-align:center; margin:4px 0 0; }
+
+@media print {
+  body { background:#fff; padding:0; }
+  .cover, .block { border:1px solid #ddd; }
+  .finding, table, .disclaimer, .rec, .exec, .recs { break-inside:avoid; }
+  h2 { break-after:avoid; }
+  details.appendix pre { white-space:pre-wrap; overflow-wrap:anywhere; overflow-x:visible; }
+  details.appendix summary { list-style:none; }
+  details.appendix summary::-webkit-details-marker { display:none; }
+  * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+}
+</style></head><body><div class="wrap"><section class="cover"><div class="cover-top"><div class="cover-id"><p class="eyebrow">MCP Security Assessment</p><h1>crm_mcp</h1><p class="sub">pilot build</p></div><div class="cover-outcome"><div class="orow"><span class="olabel">Recommendation</span><span class="pill" style="background:#6e3b34">DO NOT CONNECT</span></div><div class="orow"><span class="olabel">Overall risk</span><span class="pill" style="background:#6e3b34">CRITICAL · 4.6</span></div></div></div><div class="profile"><div><span class="k">Publisher:</span> <span class="v">first-party</span></div><div><span class="k">Hosting:</span> <span class="v">local stdio</span></div><div><span class="k">Assessor:</span> <span class="v">Security Architecture</span></div><div><span class="k">Review modes:</span> <span class="v">code</span></div><div><span class="k">Assessment depth:</span> <span class="v">Full review</span></div><div><span class="k">Assessed:</span> <span class="v">2026-07-03</span></div></div></section><section class="block exec"><h2>Executive summary</h2><div class="chips"><span class="chip"><b style="background:#6e3b34">1</b>Critical</span><span class="chip"><b style="background:#9c5a44">1</b>High</span><span class="chip"><b style="background:#97793d">1</b>Moderate</span><span class="chip n0"><b style="background:#5f7150">0</b>Low</span><span class="chip n0"><b style="background:#8a8075">0</b>Info</span></div><p>crm_mcp is a first-party stdio server exposing the CRM to agents. A live production credential is committed to source, and its single tool executes arbitrary model-supplied queries — either one alone is disqualifying. Blast radius is the full read scope of the shared key, with no per-user attribution. Clean dependency scans do not offset this.</p><p class="subhead">Top findings</p><ul class="topf-list"><li><span class="topf-main"><b style="color:#6e3b34">CRITICAL</b> Live production credential committed to source</span><span class="topf-ref muted">(Finding-01)</span></li><li><span class="topf-main"><b style="color:#9c5a44">HIGH</b> Arbitrary-query god-tool grants unbounded CRM access to the model</span><span class="topf-ref muted">(Finding-02)</span></li></ul><p class="sub" style="margin-top:12px"><b>Scope:</b> Assess the first-party crm_mcp server before expanding it beyond the pilot group.</p><div class="anchor"><span>Definition hash <code>sha256:recorded-fr</code></span><span>Checks not performed: <code>2</code></span></div></section><section class="block recs"><h2>Recommendations</h2><div class="rec"><span class="n">1</span><span class="rectext">Rotate the CRM credential today and audit its historical use — the key is in git history and every clone, so deletion is not remediation. <span class="refs">(findings Finding-01 · <code>SEC-1</code> <code>SEC-2</code>)</span></span></div><div class="rec"><span class="n">2</span><span class="rectext">Move secret handling to a secrets manager with runtime injection and fail-closed startup. <span class="refs">(<code>SEC-1</code> <code>SEC-2</code>)</span></span></div><div class="rec"><span class="n">3</span><span class="rectext">Replace crm_run_query with constrained, single-responsibility tools; route the redesign through secure-mcp-builder (threat model + review gate) before expansion. <span class="refs">(findings Finding-02 · <code>AGT-4</code>)</span></span></div><div class="rec"><span class="n">4</span><span class="rectext">Add per-user entitlement and structured audit logging before any population beyond the pilot. <span class="refs">(findings Finding-03 · <code>AUTH-5</code> <code>LOG-1</code>)</span></span></div></section><section class="block "><h2>Scope &amp; methodology</h2><p><b>Scope.</b> Assess the first-party crm_mcp server before expanding it beyond the pilot group.<br><b>Assessment depth.</b> Full review — full inspection plus a sandbox behavioral run (local) or vendor security assessment (remote); the deepest scrutiny, warranted by credentialed, write-capable, or sensitive-data exposure.<br><b>Review modes.</b> code (code = source review, live = remote endpoint, sandbox = behavioral run).<br><b>Not performed.</b> part-e-runtime, live-auth-testing — treated as unknowns that raise risk, never lower it.</p></section><section class="block "><h2>Findings</h2><div class="finding" style="border-left-color:#6e3b34"><div class="finding-head"><span class="fid">Finding-01</span><span class="finding-tags"><span class="sev" style="background:#6e3b34">CRITICAL</span><span class="badge reasoned" title="Identified by static / definition review; not exploited.">reasoned</span></span></div><h3 class="finding-title">Live production credential committed to source</h3><hr class="finding-div"><dl class="kv"><dt>Category</dt><dd>Credential / Token Exposure · Part C · <span class="controls"><code>SEC-1</code></span></dd><dt>Affected</dt><dd>config.py</dd><dt>Description</dt><dd>A live CRM API key is hardcoded in config.py and committed to the repository.</dd><dt>Impact</dt><dd>Anyone with a clone or laptop access obtains full CRM API access. The key is in git history, so removing it from HEAD is not remediation.</dd><dt>Likelihood</dt><dd>Trivial — the key is in plaintext in the tracked repo.</dd><dt>Evidence</dt><dd><pre class="evidence">config.py:14 — CRM_API_KEY = &#x27;sk-live-••••••••&#x27;</pre></dd><dt>Remediation</dt><dd>Rotate the credential now (not just delete it), then reissue via a secrets manager with runtime injection and fail-closed startup. <span class="controls"><code>SEC-1</code><code>SEC-2</code></span></dd><dt>References</dt><dd>CWE-798: Use of Hard-coded Credentials</dd><dt>Status</dt><dd>open</dd></dl></div><div class="finding" style="border-left-color:#9c5a44"><div class="finding-head"><span class="fid">Finding-02</span><span class="finding-tags"><span class="sev" style="background:#9c5a44">HIGH</span><span class="badge reasoned" title="Identified by static / definition review; not exploited.">reasoned</span><span class="cvss">CVSS 4.0 8.7</span></span></div><h3 class="finding-title">Arbitrary-query god-tool grants unbounded CRM access to the model</h3><hr class="finding-div"><dl class="kv"><dt>Category</dt><dd>Excessive Agency / Injection · Part C · <span class="controls"><code>AGT-4</code></span></dd><dt>Affected</dt><dd>tool: crm_run_query(query)</dd><dt>Description</dt><dd>The sole tool executes model-supplied queries against the CRM with no constraint, allowlist, or templating.</dd><dt>Impact</dt><dd>Any prompt injection anywhere in the agent&#x27;s context becomes a CRM query engine; the blast radius is the full read scope of the key.</dd><dt>Likelihood</dt><dd>High — reachable by any injected instruction.</dd><dt>Evidence</dt><dd><pre class="evidence">tools/query.py:22 — def crm_run_query(query: str):
+    return crm.execute(query)   # unconstrained, model-supplied</pre></dd><dt>Remediation</dt><dd>Replace with constrained, single-responsibility tools (crm_search_accounts, crm_get_opportunity, ...) with typed, bounded parameters. If a query escape hatch is genuinely required, allowlist-template it — never free-form. <span class="controls"><code>AGT-4</code></span></dd><dt>References</dt><dd>OWASP MCP Top 10: Excessive Agency</dd><dt>Status</dt><dd>open</dd></dl></div><div class="finding" style="border-left-color:#97793d"><div class="finding-head"><span class="fid">Finding-03</span><span class="finding-tags"><span class="sev" style="background:#97793d">MODERATE</span><span class="badge reasoned" title="Identified by static / definition review; not exploited.">reasoned</span></span></div><h3 class="finding-title">No per-user authorization or attribution (confused deputy)</h3><hr class="finding-div"><dl class="kv"><dt>Category</dt><dd>Part D · <span class="controls"><code>AUTH-5</code></span></dd><dt>Affected</dt><dd>shared service key</dd><dt>Description</dt><dd>A single shared key means every pilot user acts with identical CRM reach and no per-user audit attribution.</dd><dt>Impact</dt><dd>A compromised or confused agent acts with the full shared scope, and there is no per-user accountability.</dd><dt>Remediation</dt><dd>Enforce per-user entitlement via token exchange or enforced user context, and add structured audit logging. <span class="controls"><code>AUTH-5</code><code>LOG-1</code></span></dd><dt>Status</dt><dd>open</dd></dl></div></section><section class="block "><h2>Technical assessment</h2><div class="subsection"><p class="subhead"><span class="dot" style="background:#766152"></span>Profile</p><dl class="kv2"><dt>Purpose</dt><dd>Exposes the CRM to agents for the pilot group.</dd><dt>Publisher</dt><dd>first-party</dd><dt>Maintenance</dt><dd>Active internal repo; dependencies pinned, scan clean.</dd><dt>License</dt><dd>internal</dd></dl></div><div class="subsection"><p class="subhead"><span class="dot" style="background:#5f7150"></span>Capabilities</p><div class="caps-grid"><div class="cap"><div class="cap-head"><code>crm_run_query</code><span class="cap-class read">read</span></div><div class="cap-fn">Executes model-supplied queries against the CRM</div><div class="cap-anno">Annotations: none declared</div></div></div></div><div class="subsection"><p class="subhead"><span class="dot" style="background:#9c5a44"></span>Authentication &amp; credential risk</p><dl class="kv2"><dt>Client auth</dt><dd>none</dd><dt>Downstream auth</dt><dd>static hardcoded API key</dd><dt>Token passthrough</dt><dd>No</dd><dt>Credential risk</dt><dd>critical</dd><dt>Notes</dt><dd>Compromise of any clone equals full CRM access; revocation currently means rotating a key that is in git history.</dd></dl></div><div class="subsection"><p class="subhead"><span class="dot" style="background:#97793d"></span>Composition</p><p>Not assessed against a specific target environment. Standalone, the server holds broad private-data read.</p><p><b>Blast radius.</b> Full read scope of the shared key across the pilot population.</p></div></section><section class="block "><h2>Risk rating</h2><table class="risk-table"><thead><tr><th>Factor</th><th>Score (1–5)</th></tr></thead><tbody><tr><td>Provenance</td><td>1</td></tr><tr><td>Capability</td><td>5</td></tr><tr><td>Permissions</td><td>4</td></tr><tr><td>Hosting Exposure</td><td>3</td></tr><tr><td>Auth Strength</td><td>4</td></tr><tr><td>Credential Storage</td><td>5</td></tr><tr><td>Install Vector</td><td>2</td></tr><tr><td>Code Hygiene</td><td>4</td></tr><tr class="composite-row"><th>Composite</th><td><b>4.6</b></td></tr></tbody></table><p class="sub">Overrides: hardcoded live secret -&gt; CRITICAL; arbitrary-query god-tool -&gt; High</p></section><section class="block "><h2>Limitations &amp; disclaimer</h2><div class="disclaimer">This is a point-in-time static assessment (code review only) of the pinned source. It is not a warranty. Findings require independent verification before remediation decisions rely on them.<br><br>Findings are marked `reasoned` (identified by static review); none were reproduced with a live proof-of-concept. Run the validator skill to confirm exploitability and collect supporting evidence.<br><br>Checks not performed (coverage gaps): part-e-runtime, live-auth-testing.</div></section><section class="block"><h2>Appendix</h2><details class="appendix"><summary>Machine-readable assessment (assessment.json)</summary><pre>{
+  &quot;schema_version&quot;: 1,
+  &quot;meta&quot;: {
+    &quot;server_name&quot;: &quot;crm_mcp&quot;,
+    &quot;version_or_endpoint&quot;: &quot;pilot build&quot;,
+    &quot;publisher&quot;: &quot;first-party&quot;,
+    &quot;assessed_date&quot;: &quot;2026-07-03&quot;,
+    &quot;assessor&quot;: &quot;Security Architecture&quot;,
+    &quot;tier&quot;: 3,
+    &quot;review_modes&quot;: [
+      &quot;code&quot;
+    ],
+    &quot;definition_hash_sha256&quot;: &quot;sha256:recorded-from-pilot-build&quot;,
+    &quot;scope_statement&quot;: &quot;Assess the first-party crm_mcp server before expanding it beyond the pilot group.&quot;,
+    &quot;checks_not_performed&quot;: [
+      &quot;part-e-runtime&quot;,
+      &quot;live-auth-testing&quot;
+    ]
+  },
+  &quot;verdict&quot;: &quot;do_not_connect&quot;,
+  &quot;overall_risk&quot;: {
+    &quot;rating&quot;: &quot;critical&quot;,
+    &quot;composite&quot;: 4.6
+  },
+  &quot;executive_summary&quot;: {
+    &quot;posture&quot;: &quot;crm_mcp is a first-party stdio server exposing the CRM to agents. A live production credential is committed to source, and its single tool executes arbitrary model-supplied queries — either one alone is disqualifying. Blast radius is the full read scope of the shared key, with no per-user attribution. Clean dependency scans do not offset this.&quot;,
+    &quot;top_finding_ids&quot;: [
+      &quot;F-01&quot;,
+      &quot;F-02&quot;
+    ]
+  },
+  &quot;recommendations&quot;: [
+    {
+      &quot;priority&quot;: 1,
+      &quot;action&quot;: &quot;Rotate the CRM credential today and audit its historical use — the key is in git history and every clone, so deletion is not remediation.&quot;,
+      &quot;finding_ids&quot;: [
+        &quot;F-01&quot;
+      ],
+      &quot;control_ids&quot;: [
+        &quot;SEC-1&quot;,
+        &quot;SEC-2&quot;
+      ]
+    },
+    {
+      &quot;priority&quot;: 2,
+      &quot;action&quot;: &quot;Move secret handling to a secrets manager with runtime injection and fail-closed startup.&quot;,
+      &quot;control_ids&quot;: [
+        &quot;SEC-1&quot;,
+        &quot;SEC-2&quot;
+      ]
+    },
+    {
+      &quot;priority&quot;: 3,
+      &quot;action&quot;: &quot;Replace crm_run_query with constrained, single-responsibility tools; route the redesign through secure-mcp-builder (threat model + review gate) before expansion.&quot;,
+      &quot;finding_ids&quot;: [
+        &quot;F-02&quot;
+      ],
+      &quot;control_ids&quot;: [
+        &quot;AGT-4&quot;
+      ]
+    },
+    {
+      &quot;priority&quot;: 4,
+      &quot;action&quot;: &quot;Add per-user entitlement and structured audit logging before any population beyond the pilot.&quot;,
+      &quot;finding_ids&quot;: [
+        &quot;F-03&quot;
+      ],
+      &quot;control_ids&quot;: [
+        &quot;AUTH-5&quot;,
+        &quot;LOG-1&quot;
+      ]
+    }
+  ],
+  &quot;findings&quot;: [
+    {
+      &quot;id&quot;: &quot;F-01&quot;,
+      &quot;title&quot;: &quot;Live production credential committed to source&quot;,
+      &quot;severity&quot;: &quot;critical&quot;,
+      &quot;category&quot;: {
+        &quot;owasp_mcp_top10&quot;: &quot;Credential / Token Exposure&quot;,
+        &quot;review_part&quot;: &quot;C&quot;,
+        &quot;control_ids&quot;: [
+          &quot;SEC-1&quot;
+        ]
+      },
+      &quot;affected_component&quot;: &quot;config.py&quot;,
+      &quot;verification&quot;: &quot;reasoned&quot;,
+      &quot;status&quot;: &quot;open&quot;,
+      &quot;description&quot;: &quot;A live CRM API key is hardcoded in config.py and committed to the repository.&quot;,
+      &quot;impact&quot;: &quot;Anyone with a clone or laptop access obtains full CRM API access. The key is in git history, so removing it from HEAD is not remediation.&quot;,
+      &quot;likelihood&quot;: &quot;Trivial — the key is in plaintext in the tracked repo.&quot;,
+      &quot;evidence&quot;: {
+        &quot;location&quot;: &quot;config.py:14&quot;,
+        &quot;detail&quot;: &quot;CRM_API_KEY = &#x27;sk-live-••••••••&#x27;&quot;,
+        &quot;secret_masked&quot;: true
+      },
+      &quot;remediation&quot;: {
+        &quot;summary&quot;: &quot;Rotate the credential now (not just delete it), then reissue via a secrets manager with runtime injection and fail-closed startup.&quot;,
+        &quot;control_ids&quot;: [
+          &quot;SEC-1&quot;,
+          &quot;SEC-2&quot;
+        ]
+      },
+      &quot;references&quot;: [
+        &quot;CWE-798: Use of Hard-coded Credentials&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;F-02&quot;,
+      &quot;title&quot;: &quot;Arbitrary-query god-tool grants unbounded CRM access to the model&quot;,
+      &quot;severity&quot;: &quot;high&quot;,
+      &quot;cvss&quot;: {
+        &quot;version&quot;: &quot;4.0&quot;,
+        &quot;base_score&quot;: 8.7,
+        &quot;vector&quot;: &quot;CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:L/VA:N/SC:H/SI:N/SA:N&quot;
+      },
+      &quot;category&quot;: {
+        &quot;owasp_mcp_top10&quot;: &quot;Excessive Agency / Injection&quot;,
+        &quot;review_part&quot;: &quot;C&quot;,
+        &quot;control_ids&quot;: [
+          &quot;AGT-4&quot;
+        ]
+      },
+      &quot;affected_component&quot;: &quot;tool: crm_run_query(query)&quot;,
+      &quot;verification&quot;: &quot;reasoned&quot;,
+      &quot;status&quot;: &quot;open&quot;,
+      &quot;description&quot;: &quot;The sole tool executes model-supplied queries against the CRM with no constraint, allowlist, or templating.&quot;,
+      &quot;impact&quot;: &quot;Any prompt injection anywhere in the agent&#x27;s context becomes a CRM query engine; the blast radius is the full read scope of the key.&quot;,
+      &quot;likelihood&quot;: &quot;High — reachable by any injected instruction.&quot;,
+      &quot;evidence&quot;: {
+        &quot;location&quot;: &quot;tools/query.py:22&quot;,
+        &quot;detail&quot;: &quot;def crm_run_query(query: str):\n    return crm.execute(query)   # unconstrained, model-supplied&quot;,
+        &quot;secret_masked&quot;: true
+      },
+      &quot;remediation&quot;: {
+        &quot;summary&quot;: &quot;Replace with constrained, single-responsibility tools (crm_search_accounts, crm_get_opportunity, ...) with typed, bounded parameters. If a query escape hatch is genuinely required, allowlist-template it — never free-form.&quot;,
+        &quot;control_ids&quot;: [
+          &quot;AGT-4&quot;
+        ]
+      },
+      &quot;references&quot;: [
+        &quot;OWASP MCP Top 10: Excessive Agency&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;F-03&quot;,
+      &quot;title&quot;: &quot;No per-user authorization or attribution (confused deputy)&quot;,
+      &quot;severity&quot;: &quot;moderate&quot;,
+      &quot;category&quot;: {
+        &quot;review_part&quot;: &quot;D&quot;,
+        &quot;control_ids&quot;: [
+          &quot;AUTH-5&quot;
+        ]
+      },
+      &quot;affected_component&quot;: &quot;shared service key&quot;,
+      &quot;verification&quot;: &quot;reasoned&quot;,
+      &quot;status&quot;: &quot;open&quot;,
+      &quot;description&quot;: &quot;A single shared key means every pilot user acts with identical CRM reach and no per-user audit attribution.&quot;,
+      &quot;impact&quot;: &quot;A compromised or confused agent acts with the full shared scope, and there is no per-user accountability.&quot;,
+      &quot;remediation&quot;: {
+        &quot;summary&quot;: &quot;Enforce per-user entitlement via token exchange or enforced user context, and add structured audit logging.&quot;,
+        &quot;control_ids&quot;: [
+          &quot;AUTH-5&quot;,
+          &quot;LOG-1&quot;
+        ]
+      }
+    }
+  ],
+  &quot;technical_assessment&quot;: {
+    &quot;profile&quot;: {
+      &quot;purpose&quot;: &quot;Exposes the CRM to agents for the pilot group.&quot;,
+      &quot;creator_publisher&quot;: &quot;first-party&quot;,
+      &quot;maintenance_signals&quot;: &quot;Active internal repo; dependencies pinned, scan clean.&quot;,
+      &quot;license&quot;: &quot;internal&quot;
+    },
+    &quot;capabilities&quot;: [
+      {
+        &quot;name&quot;: &quot;crm_run_query&quot;,
+        &quot;function&quot;: &quot;Executes model-supplied queries against the CRM&quot;,
+        &quot;class&quot;: &quot;read&quot;,
+        &quot;annotations&quot;: &quot;none declared&quot;
+      }
+    ],
+    &quot;permissions&quot;: [
+      &quot;CRM API — full read scope of the static key&quot;
+    ],
+    &quot;hosting&quot;: {
+      &quot;hosting_model&quot;: &quot;local_stdio&quot;,
+      &quot;install_methods&quot;: [
+        &quot;per-developer machine&quot;
+      ],
+      &quot;install_time_behavior&quot;: &quot;standard Python package; no fetch-and-execute observed&quot;,
+      &quot;data_residency&quot;: &quot;local&quot;
+    },
+    &quot;protocols&quot;: {
+      &quot;mcp_spec_version&quot;: &quot;verify-at-pin&quot;,
+      &quot;transport&quot;: [
+        &quot;stdio&quot;
+      ],
+      &quot;forward_compat_notes&quot;: &quot;No sessions; low 2026-07-28 migration exposure.&quot;
+    },
+    &quot;authentication_and_credential_risk&quot;: {
+      &quot;auth_client_to_server&quot;: &quot;none&quot;,
+      &quot;auth_downstream&quot;: &quot;static hardcoded API key&quot;,
+      &quot;token_passthrough&quot;: false,
+      &quot;stored_credential_risk&quot;: &quot;critical&quot;,
+      &quot;notes&quot;: &quot;Compromise of any clone equals full CRM access; revocation currently means rotating a key that is in git history.&quot;
+    },
+    &quot;composition&quot;: {
+      &quot;trifecta_complete&quot;: null,
+      &quot;analysis&quot;: &quot;Not assessed against a specific target environment. Standalone, the server holds broad private-data read.&quot;,
+      &quot;blast_radius&quot;: &quot;Full read scope of the shared key across the pilot population.&quot;
+    }
+  },
+  &quot;risk_rating&quot;: {
+    &quot;factor_scores&quot;: {
+      &quot;provenance&quot;: 1,
+      &quot;capability&quot;: 5,
+      &quot;permissions&quot;: 4,
+      &quot;hosting_exposure&quot;: 3,
+      &quot;auth_strength&quot;: 4,
+      &quot;credential_storage&quot;: 5,
+      &quot;install_vector&quot;: 2,
+      &quot;code_hygiene&quot;: 4
+    },
+    &quot;composite&quot;: 4.6,
+    &quot;overrides_applied&quot;: [
+      &quot;hardcoded live secret -&gt; CRITICAL&quot;,
+      &quot;arbitrary-query god-tool -&gt; High&quot;
+    ]
+  },
+  &quot;limitations&quot;: {
+    &quot;disclaimer&quot;: &quot;This is a point-in-time static assessment (code review only) of the pinned source. It is not a warranty. Findings require independent verification before remediation decisions rely on them.&quot;,
+    &quot;verification_note&quot;: &quot;Findings are marked `reasoned` (identified by static review); none were reproduced with a live proof-of-concept. Run the validator skill to confirm exploitability and collect supporting evidence.&quot;
+  }
+}</pre></details></section><p class="footer">Generated from a schema-validated assessment.json · point-in-time · see Limitations.</p></div></body></html>

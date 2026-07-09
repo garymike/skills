@@ -1,0 +1,318 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mcp-security:assessment:1",
+  "title": "MCP Security Assessment",
+  "description": "Canonical data object for an mcp-security-review assessment. render_report.py validates against this and emits report.html + report.md. Shared, unchanged, with the future validator skill, which upgrades findings in place (verification, evidence).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "meta", "verdict", "overall_risk", "executive_summary", "findings", "technical_assessment", "risk_rating", "recommendations", "limitations"],
+  "properties": {
+    "schema_version": { "const": 1 },
+
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["server_name", "assessed_date", "assessor", "tier", "review_modes", "scope_statement"],
+      "properties": {
+        "server_name": { "type": "string", "minLength": 1 },
+        "version_or_endpoint": { "type": "string" },
+        "publisher": { "type": "string" },
+        "source_url": { "type": "string" },
+        "assessed_date": { "type": "string", "description": "ISO 8601 date, e.g. 2026-07-03" },
+        "assessor": { "type": "string" },
+        "tier": { "type": "integer", "minimum": 1, "maximum": 3, "description": "Risk tier from risk-tiering.md; drives report depth." },
+        "review_modes": {
+          "type": "array", "minItems": 1,
+          "items": { "enum": ["code", "live", "sandbox"] },
+          "description": "Which review-methods modes were actually used."
+        },
+        "source_commit_sha": { "type": "string", "description": "Point-in-time anchor for code review." },
+        "definition_hash_sha256": { "type": "string", "description": "From scripts/hash_tool_definitions.py; the rug-pull anchor." },
+        "scope_statement": { "type": "string", "description": "One line: what was asked to be assessed." },
+        "checks_not_performed": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Tool/coverage gaps, e.g. dependency-cve-scan, part-e-runtime. Surfaced in the exec summary and disclaimer; unrun checks raise risk, never lower it."
+        }
+      }
+    },
+
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional repo/creator trust signals (e.g. from the GitHub API). Rendered as an at-a-glance strip under the source link; omitted for non-repo targets. The plain-language trust label is derived from risk_rating.factor_scores.provenance, not a separate score.",
+      "properties": {
+        "is_fork": { "type": "boolean" },
+        "forked_from": { "type": "string", "description": "owner/repo of the upstream, if this is a fork." },
+        "stars": { "type": "integer", "minimum": 0 },
+        "forks": { "type": "integer", "minimum": 0 },
+        "open_issues": { "type": "integer", "minimum": 0 },
+        "last_activity": { "type": "string", "description": "Date of last push/commit." },
+        "owner_type": { "enum": ["user", "org"] },
+        "owner_followers": { "type": "integer", "minimum": 0 },
+        "owner_public_repos": { "type": "integer", "minimum": 0 },
+        "account_created": { "type": "string", "description": "Owner account creation date." }
+      }
+    },
+
+    "verdict": {
+      "enum": ["connect", "connect_with_conditions", "do_not_connect", "reassess"],
+      "description": "The bottom-line recommendation. Rendered as the color-coded banner at the top."
+    },
+
+    "overall_risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rating"],
+      "properties": {
+        "rating": { "enum": ["low", "moderate", "high", "critical"] },
+        "composite": { "type": "number", "minimum": 1, "maximum": 5, "description": "Weighted composite from risk_rating; overrides may set rating independently." }
+      }
+    },
+
+    "executive_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["posture"],
+      "properties": {
+        "posture": { "type": "string", "description": "2-4 sentences: what the server is, the driving reason for the rating, blast radius in business terms." },
+        "top_finding_ids": {
+          "type": "array", "maxItems": 3,
+          "items": { "$ref": "#/$defs/findingId" },
+          "description": "Up to 3 highest-impact findings, surfaced in the TLDR."
+        },
+        "conditions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Required only when verdict = connect_with_conditions: the 2-4 things that must be true to proceed."
+        }
+      }
+    },
+
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    },
+
+    "technical_assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "capabilities", "authentication_and_credential_risk"],
+      "properties": {
+        "profile": {
+          "type": "object",
+          "description": "Standardized, register-comparable fields.",
+          "properties": {
+            "purpose": { "type": "string" },
+            "creator_publisher": { "type": "string" },
+            "maintenance_signals": { "type": "string" },
+            "license": { "type": "string" }
+          }
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "function": { "type": "string" },
+              "class": { "enum": ["read", "write", "destructive"] },
+              "annotations": { "type": "string" }
+            }
+          }
+        },
+        "permissions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "OAuth scopes / API permissions / filesystem-network reach, each mapped to the capability that needs it."
+        },
+        "hosting": {
+          "type": "object",
+          "properties": {
+            "hosting_model": { "enum": ["local_stdio", "local_http", "remote_self", "remote_managed"] },
+            "install_methods": { "type": "array", "items": { "type": "string" } },
+            "install_time_behavior": { "type": "string" },
+            "data_residency": { "type": "string" }
+          }
+        },
+        "protocols": {
+          "type": "object",
+          "properties": {
+            "mcp_spec_version": { "type": "string" },
+            "transport": { "type": "array", "items": { "type": "string" } },
+            "forward_compat_notes": { "type": "string" }
+          }
+        },
+        "authentication_and_credential_risk": {
+          "type": "object",
+          "required": ["auth_client_to_server", "token_passthrough", "stored_credential_risk"],
+          "additionalProperties": false,
+          "properties": {
+            "auth_client_to_server": { "enum": ["oauth21_pkce", "bearer", "api_key", "none"] },
+            "auth_downstream": { "type": "string" },
+            "token_passthrough": { "type": "boolean" },
+            "stored_credential_risk": { "enum": ["low", "moderate", "high", "critical"] },
+            "notes": { "type": "string" }
+          }
+        },
+        "composition": {
+          "type": "object",
+          "description": "Populated when a target environment is known; otherwise state preconditions.",
+          "properties": {
+            "trifecta_complete": { "type": ["boolean", "null"] },
+            "analysis": { "type": "string" },
+            "blast_radius": { "type": "string" }
+          }
+        }
+      }
+    },
+
+    "risk_rating": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["factor_scores", "composite"],
+      "properties": {
+        "factor_scores": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["provenance", "capability", "permissions", "hosting_exposure", "auth_strength", "credential_storage", "install_vector", "code_hygiene"],
+          "properties": {
+            "provenance": { "$ref": "#/$defs/factorScore" },
+            "capability": { "$ref": "#/$defs/factorScore" },
+            "permissions": { "$ref": "#/$defs/factorScore" },
+            "hosting_exposure": { "$ref": "#/$defs/factorScore" },
+            "auth_strength": { "$ref": "#/$defs/factorScore" },
+            "credential_storage": { "$ref": "#/$defs/factorScore" },
+            "install_vector": { "$ref": "#/$defs/factorScore" },
+            "code_hygiene": { "$ref": "#/$defs/factorScore" }
+          }
+        },
+        "composite": { "type": "number", "minimum": 1, "maximum": 5 },
+        "overrides_applied": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "e.g. 'hardcoded-secret -> CRITICAL', 'trifecta completion -> min HIGH'."
+        }
+      }
+    },
+
+    "recommendations": {
+      "type": "array",
+      "description": "Consolidated, prioritized action plan; rendered right after the exec summary. Each may reference finding ids and control ids.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["priority", "action"],
+        "properties": {
+          "priority": { "type": "integer", "minimum": 1 },
+          "action": { "type": "string" },
+          "finding_ids": { "type": "array", "items": { "$ref": "#/$defs/findingId" } },
+          "control_ids": { "type": "array", "items": { "$ref": "#/$defs/controlId" } }
+        }
+      }
+    },
+
+    "limitations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["disclaimer"],
+      "properties": {
+        "disclaimer": { "type": "string", "description": "Point-in-time, methodology bounds, no-warranty. May be auto-composed by the renderer from verification levels + checks_not_performed." },
+        "verification_note": { "type": "string", "description": "e.g. 'Findings marked reasoned are from static review and require independent verification; run the validator skill to confirm.'" }
+      }
+    },
+
+    "appendix": {
+      "type": "object",
+      "description": "Optional raw supporting material (scan outputs, references).",
+      "additionalProperties": true
+    }
+  },
+
+  "$defs": {
+    "findingId": {
+      "type": "string",
+      "pattern": "^F-[0-9]{2,}$",
+      "description": "Stable finding id, e.g. F-01."
+    },
+    "controlId": {
+      "type": "string",
+      "pattern": "^(AUTH|INP|OUT|ST|SEC|LOG|SUP|AGT)-[0-9]+$",
+      "description": "secure-mcp-builder control id, e.g. AUTH-2, INP-5."
+    },
+    "severity": { "enum": ["critical", "high", "moderate", "low", "info"] },
+    "factorScore": { "type": "integer", "minimum": 1, "maximum": 5 },
+    "cvss": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "base_score", "vector"],
+      "properties": {
+        "version": { "const": "4.0" },
+        "base_score": { "type": "number", "minimum": 0, "maximum": 10 },
+        "vector": { "type": "string", "description": "CVSS 4.0 vector string, e.g. CVSS:4.0/AV:N/AC:L/..." }
+      },
+      "description": "Attach ONLY to genuine software-vulnerability findings (SSRF, injection, path traversal, RCE, auth bypass). Never on governance/composition/provenance findings."
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["location", "detail", "secret_masked"],
+      "properties": {
+        "location": { "type": "string", "description": "Where it was found, e.g. config.py:14, tools/list definition, live response." },
+        "detail": { "type": "string", "description": "The proof: redacted snippet, scanner output, definition-hash diff, request/response. MUST NOT contain live secrets/tokens." },
+        "secret_masked": { "type": "boolean", "description": "True asserts any credential/token in `detail` is masked (e.g. sk-live-••••). Live secrets are never reproduced in the report." }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "severity", "category", "affected_component", "verification", "status", "description", "impact", "remediation"],
+      "properties": {
+        "id": { "$ref": "#/$defs/findingId" },
+        "title": { "type": "string", "description": "Impact-oriented, concise." },
+        "severity": { "$ref": "#/$defs/severity" },
+        "cvss": { "$ref": "#/$defs/cvss" },
+        "category": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["review_part"],
+          "properties": {
+            "owasp_mcp_top10": { "type": "string", "description": "e.g. 'Tool Poisoning', 'Token Exposure'." },
+            "review_part": { "enum": ["A", "B", "C", "D", "E", "composition"] },
+            "control_ids": { "type": "array", "items": { "$ref": "#/$defs/controlId" } }
+          }
+        },
+        "affected_component": { "type": "string" },
+        "verification": {
+          "enum": ["reasoned", "observed", "confirmed"],
+          "description": "reasoned = static/definition review; observed = seen in behavior/traffic; confirmed = reproduced with PoC. Default reasoned. The validator skill upgrades this."
+        },
+        "status": { "enum": ["open", "mitigated", "accepted", "informational"] },
+        "description": { "type": "string" },
+        "impact": { "type": "string", "description": "What an attacker achieves / business consequence." },
+        "likelihood": { "type": "string", "description": "Exploitability / preconditions." },
+        "evidence": { "$ref": "#/$defs/evidence" },
+        "remediation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["summary"],
+          "properties": {
+            "summary": { "type": "string", "description": "Specific, actionable fix." },
+            "control_ids": { "type": "array", "items": { "$ref": "#/$defs/controlId" }, "description": "secure-mcp-builder control(s) that implement the fix." },
+            "references": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "references": { "type": "array", "items": { "type": "string" } }
+      },
+      "allOf": [
+        {
+          "description": "Evidence is mandatory on Critical and High findings.",
+          "if": { "properties": { "severity": { "enum": ["critical", "high"] } } },
+          "then": { "required": ["evidence"] }
+        }
+      ]
+    }
+  }
+}

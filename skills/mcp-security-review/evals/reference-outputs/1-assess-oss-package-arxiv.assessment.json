@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "meta": {
+    "server_name": "arxiv-mcp-server",
+    "version_or_endpoint": "pin exact version at install",
+    "publisher": "blazickjp (individual)",
+    "source_url": "github.com/blazickjp/arxiv-mcp-server",
+    "source_commit_sha": "7f3c9e2a1b4d6c8e0f2a4b6d8c0e2f4a6b8d0c2e",
+    "assessed_date": "2026-07-02",
+    "assessor": "Security Architecture",
+    "tier": 2,
+    "review_modes": ["code"],
+    "definition_hash_sha256": "sha256:TBD-at-pinned-install",
+    "scope_statement": "Assess arxiv-mcp-server for researchers who already have a document store and email connectors.",
+    "checks_not_performed": ["sandbox-egress-verification"]
+  },
+  "provenance": {
+    "is_fork": false,
+    "stars": 412,
+    "forks": 47,
+    "open_issues": 9,
+    "last_activity": "2026-06",
+    "owner_type": "user",
+    "owner_followers": 380,
+    "owner_public_repos": 41,
+    "account_created": "2019-05"
+  },
+  "verdict": "connect_with_conditions",
+  "overall_risk": { "rating": "moderate", "composite": 1.85 },
+  "executive_summary": {
+    "posture": "arxiv-mcp-server is a read-only, no-credential local server that fetches public arXiv papers into model context. Its own risk is low, but for the requesting population — who already hold a document store and email connectors — it adds the untrusted-content leg and completes the lethal trifecta. That composition risk, plus a name collision and an individual-maintainer supply chain, drive the rating; the conditions below reduce it.",
+    "top_finding_ids": ["F-01", "F-02"],
+    "conditions": [
+      "Managed install only: package the pinned PyPI version internally and block ad-hoc npm/npx installs of this name.",
+      "Break the trifecta for the pilot: require confirmation on email-send in any session where read_paper has fired, or limit the pilot to users without the email connector.",
+      "Run a sandbox verification before rollout: confirm egress is arxiv.org only and record the tool-definition hash."
+    ]
+  },
+  "recommendations": [
+    { "priority": 1, "action": "Managed install only — publish the pinned PyPI version internally and block ad-hoc npm/npx installs of this name (name-collision defense).", "finding_ids": ["F-02"] },
+    { "priority": 2, "action": "Break the trifecta for the pilot population: gateway/client policy requiring confirmation on email-send once read_paper has fired, or restrict the pilot to users without the email connector.", "finding_ids": ["F-01"] },
+    { "priority": 3, "action": "Sandbox verification run before rollout: confirm egress is arxiv.org only; record the tool-definition hash for rug-pull monitoring." },
+    { "priority": 4, "action": "Register in the inventory, wire definition-hash monitoring, and re-assess on version bump or in 12 months." }
+  ],
+  "findings": [
+    {
+      "id": "F-01",
+      "title": "Composition completes the lethal trifecta for the requesting population",
+      "severity": "high",
+      "category": { "owasp_mcp_top10": "Excessive Agency / Data Exfiltration", "review_part": "composition" },
+      "affected_component": "read_paper (untrusted content) combined with the population's existing connectors",
+      "verification": "reasoned",
+      "status": "open",
+      "description": "For the requesting population (already connected: a document store and corporate email), this server adds continuous untrusted-content exposure — paper text enters model context — alongside existing private-data access and an email send channel.",
+      "impact": "A crafted paper could instruct the agent to read document-store content and email it out. Not a defect in this server; a property of the combination.",
+      "likelihood": "Moderate — requires a crafted paper to reach the agent, which is plausible for a research workflow.",
+      "evidence": { "location": "combined connected set (composition analysis)", "detail": "read_paper -> untrusted content leg; existing document store -> private-data leg; existing email -> external-comms leg. All three legs present for the population.", "secret_masked": true },
+      "remediation": { "summary": "Break a leg for the pilot: require confirmation on email-send after read_paper has fired, or scope the pilot to users without the email connector. Prefer a deterministic gateway control over relying on the model.", "control_ids": ["AGT-1", "AGT-3"] },
+      "references": ["Lethal trifecta (simonwillison.net/2025/Jun/16/the-lethal-trifecta/)"]
+    },
+    {
+      "id": "F-02",
+      "title": "Cross-registry name collision invites a supply-chain swap",
+      "severity": "high",
+      "category": { "owasp_mcp_top10": "Supply Chain", "review_part": "A" },
+      "affected_component": "package name (PyPI vs npm)",
+      "verification": "reasoned",
+      "status": "open",
+      "description": "An unrelated third-party npm package exists under the same name. The project itself warns that installs must use `uv tool install` from PyPI, not npm/npx.",
+      "impact": "A user who 'npm installs' this name gets someone else's code — a straightforward supply-chain substitution.",
+      "likelihood": "Moderate — easy to hit by habit; the correct install path is non-obvious.",
+      "evidence": { "location": "npm registry vs PyPI", "detail": "Same name resolves to an unrelated npm package; upstream README warns: install via `uv tool install` from PyPI only.", "secret_masked": true },
+      "remediation": { "summary": "Managed install only: publish the pinned PyPI version internally and block ad-hoc npm/npx installs of this name.", "control_ids": ["SUP-1"] },
+      "references": ["OWASP MCP Top 10: Supply Chain"]
+    }
+  ],
+  "technical_assessment": {
+    "profile": {
+      "purpose": "Bridges AI assistants to arXiv: search, download, and read paper content into model context, with local caching.",
+      "creator_publisher": "Individual maintainer (blazickjp), ~400 stars",
+      "maintenance_signals": "Active in 2026; single primary maintainer.",
+      "license": "Open source (verify current file at pin time)"
+    },
+    "capabilities": [
+      { "name": "search_papers", "function": "Query arXiv by keyword, author, or category", "class": "read", "annotations": "openWorldHint" },
+      { "name": "download_paper", "function": "Fetch a paper (HTML/PDF) to the local cache", "class": "write", "annotations": "writes local cache only" },
+      { "name": "list_papers", "function": "List locally cached papers", "class": "read", "annotations": "local read" },
+      { "name": "read_paper", "function": "Load cached paper text into model context", "class": "read", "annotations": "untrusted content enters context" }
+    ],
+    "permissions": ["No credentials or OAuth scopes", "Filesystem: one configurable cache directory", "Network: arxiv.org egress only by design (verify in sandbox)"],
+    "hosting": {
+      "hosting_model": "local_stdio",
+      "install_methods": ["uv tool install (PyPI)", "mcpb desktop bundle"],
+      "install_time_behavior": "Standard Python package; no fetch-and-execute observed in the install path.",
+      "data_residency": "Local (public arXiv content plus local cache)"
+    },
+    "protocols": {
+      "mcp_spec_version": "verify-at-pin",
+      "transport": ["stdio"],
+      "forward_compat_notes": "No sessions; no Roots/Sampling dependence observed; low 2026-07-28 migration exposure."
+    },
+    "authentication_and_credential_risk": {
+      "auth_client_to_server": "none",
+      "auth_downstream": "anonymous public arXiv API",
+      "token_passthrough": false,
+      "stored_credential_risk": "low",
+      "notes": "No credentials exist to steal; host compromise yields only cached public papers."
+    },
+    "composition": {
+      "trifecta_complete": true,
+      "analysis": "For the requesting population (document store + email), read_paper adds continuous untrusted-content exposure alongside existing private-data access and an email send channel — the trifecta is complete. Standalone, the server is low risk.",
+      "blast_radius": "Whatever the pilot users' own document-store and email permissions reach; detection depends on email DLP and audit."
+    }
+  },
+  "risk_rating": {
+    "factor_scores": { "provenance": 3, "capability": 2, "permissions": 1, "hosting_exposure": 2, "auth_strength": 2, "credential_storage": 1, "install_vector": 3, "code_hygiene": 2 },
+    "composite": 1.85,
+    "overrides_applied": ["Composition completes the trifecta for this population -> HIGH floor for that population absent conditions"]
+  },
+  "limitations": {
+    "disclaimer": "Point-in-time static assessment (code review) of the package at pin time. Not a warranty. Findings require independent verification before remediation decisions rely on them.",
+    "verification_note": "Findings are marked `reasoned` (static review); none were reproduced with a live proof-of-concept. The composition finding depends on the combined connected set. Run the validator skill to confirm."
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "meta": {
+    "server_name": "crm_mcp",
+    "version_or_endpoint": "pilot build",
+    "publisher": "first-party",
+    "assessed_date": "2026-07-03",
+    "assessor": "Security Architecture",
+    "tier": 3,
+    "review_modes": ["code"],
+    "definition_hash_sha256": "sha256:recorded-from-pilot-build",
+    "scope_statement": "Assess the first-party crm_mcp server before expanding it beyond the pilot group.",
+    "checks_not_performed": ["part-e-runtime", "live-auth-testing"]
+  },
+  "verdict": "do_not_connect",
+  "overall_risk": { "rating": "critical", "composite": 4.6 },
+  "executive_summary": {
+    "posture": "crm_mcp is a first-party stdio server exposing the CRM to agents. A live production credential is committed to source, and its single tool executes arbitrary model-supplied queries — either one alone is disqualifying. Blast radius is the full read scope of the shared key, with no per-user attribution. Clean dependency scans do not offset this.",
+    "top_finding_ids": ["F-01", "F-02"]
+  },
+  "recommendations": [
+    { "priority": 1, "action": "Rotate the CRM credential today and audit its historical use — the key is in git history and every clone, so deletion is not remediation.", "finding_ids": ["F-01"], "control_ids": ["SEC-1", "SEC-2"] },
+    { "priority": 2, "action": "Move secret handling to a secrets manager with runtime injection and fail-closed startup.", "control_ids": ["SEC-1", "SEC-2"] },
+    { "priority": 3, "action": "Replace crm_run_query with constrained, single-responsibility tools; route the redesign through secure-mcp-builder (threat model + review gate) before expansion.", "finding_ids": ["F-02"], "control_ids": ["AGT-4"] },
+    { "priority": 4, "action": "Add per-user entitlement and structured audit logging before any population beyond the pilot.", "finding_ids": ["F-03"], "control_ids": ["AUTH-5", "LOG-1"] }
+  ],
+  "findings": [
+    {
+      "id": "F-01",
+      "title": "Live production credential committed to source",
+      "severity": "critical",
+      "category": { "owasp_mcp_top10": "Credential / Token Exposure", "review_part": "C", "control_ids": ["SEC-1"] },
+      "affected_component": "config.py",
+      "verification": "reasoned",
+      "status": "open",
+      "description": "A live CRM API key is hardcoded in config.py and committed to the repository.",
+      "impact": "Anyone with a clone or laptop access obtains full CRM API access. The key is in git history, so removing it from HEAD is not remediation.",
+      "likelihood": "Trivial — the key is in plaintext in the tracked repo.",
+      "evidence": { "location": "config.py:14", "detail": "CRM_API_KEY = 'sk-live-••••••••'", "secret_masked": true },
+      "remediation": { "summary": "Rotate the credential now (not just delete it), then reissue via a secrets manager with runtime injection and fail-closed startup.", "control_ids": ["SEC-1", "SEC-2"] },
+      "references": ["CWE-798: Use of Hard-coded Credentials"]
+    },
+    {
+      "id": "F-02",
+      "title": "Arbitrary-query god-tool grants unbounded CRM access to the model",
+      "severity": "high",
+      "cvss": { "version": "4.0", "base_score": 8.7, "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:L/VA:N/SC:H/SI:N/SA:N" },
+      "category": { "owasp_mcp_top10": "Excessive Agency / Injection", "review_part": "C", "control_ids": ["AGT-4"] },
+      "affected_component": "tool: crm_run_query(query)",
+      "verification": "reasoned",
+      "status": "open",
+      "description": "The sole tool executes model-supplied queries against the CRM with no constraint, allowlist, or templating.",
+      "impact": "Any prompt injection anywhere in the agent's context becomes a CRM query engine; the blast radius is the full read scope of the key.",
+      "likelihood": "High — reachable by any injected instruction.",
+      "evidence": { "location": "tools/query.py:22", "detail": "def crm_run_query(query: str):\n    return crm.execute(query)   # unconstrained, model-supplied", "secret_masked": true },
+      "remediation": { "summary": "Replace with constrained, single-responsibility tools (crm_search_accounts, crm_get_opportunity, ...) with typed, bounded parameters. If a query escape hatch is genuinely required, allowlist-template it — never free-form.", "control_ids": ["AGT-4"] },
+      "references": ["OWASP MCP Top 10: Excessive Agency"]
+    },
+    {
+      "id": "F-03",
+      "title": "No per-user authorization or attribution (confused deputy)",
+      "severity": "moderate",
+      "category": { "review_part": "D", "control_ids": ["AUTH-5"] },
+      "affected_component": "shared service key",
+      "verification": "reasoned",
+      "status": "open",
+      "description": "A single shared key means every pilot user acts with identical CRM reach and no per-user audit attribution.",
+      "impact": "A compromised or confused agent acts with the full shared scope, and there is no per-user accountability.",
+      "remediation": { "summary": "Enforce per-user entitlement via token exchange or enforced user context, and add structured audit logging.", "control_ids": ["AUTH-5", "LOG-1"] }
+    }
+  ],
+  "technical_assessment": {
+    "profile": {
+      "purpose": "Exposes the CRM to agents for the pilot group.",
+      "creator_publisher": "first-party",
+      "maintenance_signals": "Active internal repo; dependencies pinned, scan clean.",
+      "license": "internal"
+    },
+    "capabilities": [
+      { "name": "crm_run_query", "function": "Executes model-supplied queries against the CRM", "class": "read", "annotations": "none declared" }
+    ],
+    "permissions": ["CRM API — full read scope of the static key"],
+    "hosting": {
+      "hosting_model": "local_stdio",
+      "install_methods": ["per-developer machine"],
+      "install_time_behavior": "standard Python package; no fetch-and-execute observed",
+      "data_residency": "local"
+    },
+    "protocols": {
+      "mcp_spec_version": "verify-at-pin",
+      "transport": ["stdio"],
+      "forward_compat_notes": "No sessions; low 2026-07-28 migration exposure."
+    },
+    "authentication_and_credential_risk": {
+      "auth_client_to_server": "none",
+      "auth_downstream": "static hardcoded API key",
+      "token_passthrough": false,
+      "stored_credential_risk": "critical",
+      "notes": "Compromise of any clone equals full CRM access; revocation currently means rotating a key that is in git history."
+    },
+    "composition": {
+      "trifecta_complete": null,
+      "analysis": "Not assessed against a specific target environment. Standalone, the server holds broad private-data read.",
+      "blast_radius": "Full read scope of the shared key across the pilot population."
+    }
+  },
+  "risk_rating": {
+    "factor_scores": { "provenance": 1, "capability": 5, "permissions": 4, "hosting_exposure": 3, "auth_strength": 4, "credential_storage": 5, "install_vector": 2, "code_hygiene": 4 },
+    "composite": 4.6,
+    "overrides_applied": ["hardcoded live secret -> CRITICAL", "arbitrary-query god-tool -> High"]
+  },
+  "limitations": {
+    "disclaimer": "This is a point-in-time static assessment (code review only) of the pinned source. It is not a warranty. Findings require independent verification before remediation decisions rely on them.",
+    "verification_note": "Findings are marked `reasoned` (identified by static review); none were reproduced with a live proof-of-concept. Run the validator skill to confirm exploitability and collect supporting evidence."
+  }
+}
