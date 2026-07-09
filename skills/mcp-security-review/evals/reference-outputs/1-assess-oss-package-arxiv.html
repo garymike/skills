@@ -1,0 +1,349 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Security Assessment — arxiv-mcp-server</title><style>
+:root { --paper:#e9e3d6; --panel:#fdfbf7; --ink:#2c2a25; --muted:#6f685c;
+        --line:#e4ded2; --accent:#766152; --accent-soft:#efeae0; }
+* { box-sizing:border-box; }
+body { font:16px/1.62 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       color:var(--ink); background:var(--paper); margin:0; padding:30px 16px; }
+.wrap { max-width:840px; margin:0 auto; }
+
+.cover, .block { background:var(--panel); border:1px solid var(--line); border-radius:10px;
+                 padding:24px 28px; margin:0 0 16px; }
+.exec { background:#dce3ed; border:2px solid #9bb0cb; }
+.recs { background:#e3e9d8; border:2px solid #a7b988; }
+h1 { font-size:27px; margin:0 0 2px; letter-spacing:-.01em; }
+h2 { font-size:13px; text-transform:uppercase; letter-spacing:.09em; color:var(--muted);
+     margin:0 0 14px; display:flex; align-items:center; gap:8px; }
+h2::before { content:""; width:9px; height:9px; border-radius:2px; background:var(--accent); }
+h3 { font-size:15.5px; margin:0; }
+p { margin:0 0 12px; } p:last-child { margin-bottom:0; }
+a { color:var(--accent); text-decoration:none; }
+small, .muted { color:var(--muted); }
+code, pre, .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.eyebrow { text-transform:uppercase; letter-spacing:.12em; font-size:11.5px; color:var(--muted); margin:0 0 6px; }
+.sub { color:var(--muted); font-size:13.5px; margin:2px 0 0; }
+.source { display:inline-block; margin-top:7px; font-size:13px; color:var(--accent);
+          font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; word-break:break-all; }
+.prov { margin-top:10px; font-size:12.5px; line-height:1.7; }
+.prov-label { display:inline-block; color:#fff; font-size:10px; font-weight:700; text-transform:uppercase;
+              letter-spacing:.05em; padding:2px 9px; border-radius:20px; margin-right:9px; vertical-align:middle; }
+.prov-signals { color:var(--muted); vertical-align:middle; }
+.subhead { color:var(--muted); font-size:12px; margin:16px 0 5px; text-transform:uppercase; letter-spacing:.06em; }
+
+.cover-top { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; flex-wrap:wrap; }
+.cover-id { flex:1 1 340px; min-width:0; }
+.cover-outcome { flex:0 0 auto; display:flex; flex-direction:column; gap:8px; align-items:flex-end; }
+.orow { display:flex; align-items:center; gap:10px; }
+.olabel { font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); }
+.pill { display:inline-block; color:#fff; font-weight:700; letter-spacing:.02em; padding:6px 12px;
+        border-radius:6px; font-size:12.5px; min-width:130px; text-align:center; }
+.profile { display:grid; grid-template-columns:repeat(auto-fit,minmax(195px,1fr)); gap:6px 30px;
+           margin:18px 0 0; padding:15px 0 0; border-top:1px solid var(--line); font-size:13.5px; }
+.profile .k { color:var(--muted); }
+.profile .v { font-weight:600; }
+
+.chips { margin:0 0 14px; }
+.chip { display:inline-flex; align-items:center; font-size:12px; font-weight:600; padding:3px 12px 3px 4px;
+        border-radius:20px; margin:0 7px 7px 0; border:1px solid var(--line); color:var(--muted); background:#fff; }
+.chip.n0 { opacity:.5; }
+.chip b { display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto;
+          width:18px; height:18px; border-radius:50%; color:#fff; font-size:11px; margin-right:6px; }
+.topf-list { list-style:none; margin:0 0 6px; padding:0; }
+.topf-list li { display:flex; justify-content:space-between; align-items:baseline; gap:14px; padding:2px 0; }
+.topf-ref { white-space:nowrap; }
+
+.anchor { font-size:12.5px; color:var(--muted); border-top:1px solid var(--line); margin-top:14px; padding-top:10px; }
+.anchor span { display:inline-block; margin-right:16px; }
+.anchor code { color:var(--ink); }
+
+.rec { display:flex; align-items:center; gap:11px; font-size:15px; }
+.rec + .rec { margin-top:12px; padding-top:12px; border-top:1px solid #d2dcc0; }
+.rec .n { flex:0 0 auto; width:24px; height:24px; border-radius:50%;
+          background:var(--accent); color:#fff; font-size:13px; font-weight:700;
+          display:flex; align-items:center; justify-content:center; }
+.rec .rectext { flex:1; }
+.rec .refs { color:var(--muted); font-size:12.5px; }
+
+.finding { background:#fbf9f4; border:1px solid var(--line); border-left-width:5px; border-radius:8px;
+           padding:16px 18px; margin:0 0 14px; }
+.finding:last-child { margin-bottom:0; }
+.finding-head { display:flex; align-items:center; justify-content:space-between; gap:9px; flex-wrap:wrap; margin-bottom:4px; }
+.finding-tags { display:flex; gap:7px; flex-wrap:wrap; }
+.sev { color:#fff; font-weight:700; font-size:11px; letter-spacing:.05em; padding:3px 8px; border-radius:5px; }
+.fid { font-weight:700; color:var(--accent); font-size:13px; letter-spacing:.03em; text-transform:uppercase; }
+.finding-title { font-size:15.5px; margin:0 0 12px; }
+.finding-div { border:none; border-top:1px solid var(--line); margin:0 0 12px; }
+.badge { font-size:11px; padding:2px 8px; border-radius:5px; border:1px solid var(--line);
+         color:var(--muted); background:#fff; }
+.badge.confirmed { border-color:#5f7150; color:#5f7150; }
+.badge.observed { border-color:#97793d; color:#97793d; }
+.cvss { font-size:11px; font-weight:600; color:var(--ink); background:var(--accent-soft); padding:2px 8px; border-radius:5px; }
+dl.kv { display:grid; grid-template-columns:100px 1fr; gap:7px 14px; margin:0; font-size:14.5px; }
+dl.kv dt { color:var(--muted); font-size:13px; }
+dl.kv dd { margin:0; }
+dl.kv2 { display:grid; grid-template-columns:140px 1fr; gap:7px 14px; margin:0; font-size:14px; }
+dl.kv2 dt { color:var(--muted); font-size:13px; }
+dl.kv2 dd { margin:0; }
+.subsection { margin:16px 0 0; padding:16px 0 0; border-top:1px solid var(--line); }
+.subsection:first-child { margin-top:0; padding-top:0; border-top:none; }
+.subsection .subhead { margin:0 0 8px; }
+.subhead .dot { display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:7px; vertical-align:middle; }
+.caps-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px 28px; }
+.cap { margin:0; }
+.cap-head { display:flex; align-items:center; gap:9px; margin-bottom:2px; }
+.cap-head code { font-weight:600; font-size:14px; }
+.cap-class { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+             background:#615a4e; color:#fff; border-radius:4px; padding:2px 8px; }
+.cap-class.destructive { background:#7a4a3e; }
+.cap-fn { font-size:14px; }
+.cap-anno { font-size:12.5px; color:var(--muted); margin-top:2px; }
+pre.evidence { background:#efeae0; color:#403a30; border:1px solid #e0d9cb; padding:10px 12px;
+               border-radius:6px; font-size:12.5px; overflow-x:auto; white-space:pre-wrap; margin:0; }
+.controls code { background:var(--accent-soft); color:#5a4a37; padding:1px 6px; border-radius:4px; font-size:12px; margin-right:4px; }
+
+table { border-collapse:collapse; width:100%; font-size:14px; margin:4px 0; }
+th, td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+tr:last-child td, tr:last-child th { border-bottom:none; }
+.risk-table { table-layout:fixed; }
+.risk-table th, .risk-table td { width:50%; }
+.composite-row td, .composite-row th { background:#efe9db; border-top:1px solid #d8d0bf; }
+.composite-row th { color:var(--ink); font-weight:700; text-transform:none; font-size:14px; letter-spacing:0; }
+.composite-row td { font-size:15px; }
+
+.disclaimer { font-size:13px; color:#5c564b; background:#f4f0e7; border:1px solid var(--line); border-radius:8px; padding:14px 16px; }
+details.appendix summary { cursor:pointer; color:var(--muted); font-size:13px; font-weight:600; user-select:none; }
+details.appendix pre { background:#f6f3ec; border:1px solid var(--line); border-radius:8px; padding:14px;
+                       font-size:12px; overflow-x:auto; margin-top:12px; }
+.footer { color:var(--muted); font-size:12px; text-align:center; margin:4px 0 0; }
+
+@media print {
+  body { background:#fff; padding:0; }
+  .cover, .block { border:1px solid #ddd; }
+  .finding, table, .disclaimer, .rec, .exec, .recs { break-inside:avoid; }
+  h2 { break-after:avoid; }
+  details.appendix pre { white-space:pre-wrap; overflow-wrap:anywhere; overflow-x:visible; }
+  details.appendix summary { list-style:none; }
+  details.appendix summary::-webkit-details-marker { display:none; }
+  * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+}
+</style></head><body><div class="wrap"><section class="cover"><div class="cover-top"><div class="cover-id"><p class="eyebrow">MCP Security Assessment</p><h1>arxiv-mcp-server</h1><p class="sub">pin exact version at install</p><a class="source" href="https://github.com/blazickjp/arxiv-mcp-server/tree/7f3c9e2a1b4d6c8e0f2a4b6d8c0e2f4a6b8d0c2e">github.com/blazickjp/arxiv-mcp-server @ 7f3c9e2</a></div><div class="cover-outcome"><div class="orow"><span class="olabel">Recommendation</span><span class="pill" style="background:#97793d">CONNECT WITH CONDITIONS</span></div><div class="orow"><span class="olabel">Overall risk</span><span class="pill" style="background:#97793d">MODERATE · 1.85</span></div></div></div><div class="prov"><span class="prov-label" style="background:#97793d">Known OSS</span><span class="prov-signals">★ 412 · 47 forks · original · 380 followers · 41 repos · since 2019 · updated 2026-06</span></div><div class="profile"><div><span class="k">Publisher:</span> <span class="v">blazickjp (individual)</span></div><div><span class="k">Hosting:</span> <span class="v">local stdio</span></div><div><span class="k">Assessor:</span> <span class="v">Security Architecture</span></div><div><span class="k">Review modes:</span> <span class="v">code</span></div><div><span class="k">Assessment depth:</span> <span class="v">Standard review</span></div><div><span class="k">Assessed:</span> <span class="v">2026-07-02</span></div></div></section><section class="block exec"><h2>Executive summary</h2><div class="chips"><span class="chip n0"><b style="background:#6e3b34">0</b>Critical</span><span class="chip"><b style="background:#9c5a44">2</b>High</span><span class="chip n0"><b style="background:#97793d">0</b>Moderate</span><span class="chip n0"><b style="background:#5f7150">0</b>Low</span><span class="chip n0"><b style="background:#8a8075">0</b>Info</span></div><p>arxiv-mcp-server is a read-only, no-credential local server that fetches public arXiv papers into model context. Its own risk is low, but for the requesting population — who already hold a document store and email connectors — it adds the untrusted-content leg and completes the lethal trifecta. That composition risk, plus a name collision and an individual-maintainer supply chain, drive the rating; the conditions below reduce it.</p><p class="subhead">Top findings</p><ul class="topf-list"><li><span class="topf-main"><b style="color:#9c5a44">HIGH</b> Composition completes the lethal trifecta for the requesting population</span><span class="topf-ref muted">(Finding-01)</span></li><li><span class="topf-main"><b style="color:#9c5a44">HIGH</b> Cross-registry name collision invites a supply-chain swap</span><span class="topf-ref muted">(Finding-02)</span></li></ul><p class="subhead">Conditions to proceed</p><ul style="margin:0"><li>Managed install only: package the pinned PyPI version internally and block ad-hoc npm/npx installs of this name.</li><li>Break the trifecta for the pilot: require confirmation on email-send in any session where read_paper has fired, or limit the pilot to users without the email connector.</li><li>Run a sandbox verification before rollout: confirm egress is arxiv.org only and record the tool-definition hash.</li></ul><p class="sub" style="margin-top:12px"><b>Scope:</b> Assess arxiv-mcp-server for researchers who already have a document store and email connectors.</p><div class="anchor"><span>Source SHA <code>7f3c9e2a1b4d</code></span><span>Definition hash <code>sha256:TBD-at-pinn</code></span><span>Checks not performed: <code>1</code></span></div></section><section class="block recs"><h2>Recommendations</h2><div class="rec"><span class="n">1</span><span class="rectext">Managed install only — publish the pinned PyPI version internally and block ad-hoc npm/npx installs of this name (name-collision defense). <span class="refs">(findings Finding-02)</span></span></div><div class="rec"><span class="n">2</span><span class="rectext">Break the trifecta for the pilot population: gateway/client policy requiring confirmation on email-send once read_paper has fired, or restrict the pilot to users without the email connector. <span class="refs">(findings Finding-01)</span></span></div><div class="rec"><span class="n">3</span><span class="rectext">Sandbox verification run before rollout: confirm egress is arxiv.org only; record the tool-definition hash for rug-pull monitoring.</span></div><div class="rec"><span class="n">4</span><span class="rectext">Register in the inventory, wire definition-hash monitoring, and re-assess on version bump or in 12 months.</span></div></section><section class="block "><h2>Scope &amp; methodology</h2><p><b>Scope.</b> Assess arxiv-mcp-server for researchers who already have a document store and email connectors.<br><b>Assessment depth.</b> Standard review — full inspection across provenance, tool surface, code/runtime, and auth/data-flow.<br><b>Review modes.</b> code (code = source review, live = remote endpoint, sandbox = behavioral run).<br><b>Not performed.</b> sandbox-egress-verification — treated as unknowns that raise risk, never lower it.</p></section><section class="block "><h2>Findings</h2><div class="finding" style="border-left-color:#9c5a44"><div class="finding-head"><span class="fid">Finding-01</span><span class="finding-tags"><span class="sev" style="background:#9c5a44">HIGH</span><span class="badge reasoned" title="Identified by static / definition review; not exploited.">reasoned</span></span></div><h3 class="finding-title">Composition completes the lethal trifecta for the requesting population</h3><hr class="finding-div"><dl class="kv"><dt>Category</dt><dd>Excessive Agency / Data Exfiltration · Part composition</dd><dt>Affected</dt><dd>read_paper (untrusted content) combined with the population&#x27;s existing connectors</dd><dt>Description</dt><dd>For the requesting population (already connected: a document store and corporate email), this server adds continuous untrusted-content exposure — paper text enters model context — alongside existing private-data access and an email send channel.</dd><dt>Impact</dt><dd>A crafted paper could instruct the agent to read document-store content and email it out. Not a defect in this server; a property of the combination.</dd><dt>Likelihood</dt><dd>Moderate — requires a crafted paper to reach the agent, which is plausible for a research workflow.</dd><dt>Evidence</dt><dd><pre class="evidence">combined connected set (composition analysis) — read_paper -&gt; untrusted content leg; existing document store -&gt; private-data leg; existing email -&gt; external-comms leg. All three legs present for the population.</pre></dd><dt>Remediation</dt><dd>Break a leg for the pilot: require confirmation on email-send after read_paper has fired, or scope the pilot to users without the email connector. Prefer a deterministic gateway control over relying on the model. <span class="controls"><code>AGT-1</code><code>AGT-3</code></span></dd><dt>References</dt><dd>Lethal trifecta (simonwillison.net/2025/Jun/16/the-lethal-trifecta/)</dd><dt>Status</dt><dd>open</dd></dl></div><div class="finding" style="border-left-color:#9c5a44"><div class="finding-head"><span class="fid">Finding-02</span><span class="finding-tags"><span class="sev" style="background:#9c5a44">HIGH</span><span class="badge reasoned" title="Identified by static / definition review; not exploited.">reasoned</span></span></div><h3 class="finding-title">Cross-registry name collision invites a supply-chain swap</h3><hr class="finding-div"><dl class="kv"><dt>Category</dt><dd>Supply Chain · Part A</dd><dt>Affected</dt><dd>package name (PyPI vs npm)</dd><dt>Description</dt><dd>An unrelated third-party npm package exists under the same name. The project itself warns that installs must use `uv tool install` from PyPI, not npm/npx.</dd><dt>Impact</dt><dd>A user who &#x27;npm installs&#x27; this name gets someone else&#x27;s code — a straightforward supply-chain substitution.</dd><dt>Likelihood</dt><dd>Moderate — easy to hit by habit; the correct install path is non-obvious.</dd><dt>Evidence</dt><dd><pre class="evidence">npm registry vs PyPI — Same name resolves to an unrelated npm package; upstream README warns: install via `uv tool install` from PyPI only.</pre></dd><dt>Remediation</dt><dd>Managed install only: publish the pinned PyPI version internally and block ad-hoc npm/npx installs of this name. <span class="controls"><code>SUP-1</code></span></dd><dt>References</dt><dd>OWASP MCP Top 10: Supply Chain</dd><dt>Status</dt><dd>open</dd></dl></div></section><section class="block "><h2>Technical assessment</h2><div class="subsection"><p class="subhead"><span class="dot" style="background:#766152"></span>Profile</p><dl class="kv2"><dt>Purpose</dt><dd>Bridges AI assistants to arXiv: search, download, and read paper content into model context, with local caching.</dd><dt>Publisher</dt><dd>Individual maintainer (blazickjp), ~400 stars</dd><dt>Maintenance</dt><dd>Active in 2026; single primary maintainer.</dd><dt>License</dt><dd>Open source (verify current file at pin time)</dd></dl></div><div class="subsection"><p class="subhead"><span class="dot" style="background:#5f7150"></span>Capabilities</p><div class="caps-grid"><div class="cap"><div class="cap-head"><code>search_papers</code><span class="cap-class read">read</span></div><div class="cap-fn">Query arXiv by keyword, author, or category</div><div class="cap-anno">Annotations: openWorldHint</div></div><div class="cap"><div class="cap-head"><code>download_paper</code><span class="cap-class write">write</span></div><div class="cap-fn">Fetch a paper (HTML/PDF) to the local cache</div><div class="cap-anno">Annotations: writes local cache only</div></div><div class="cap"><div class="cap-head"><code>list_papers</code><span class="cap-class read">read</span></div><div class="cap-fn">List locally cached papers</div><div class="cap-anno">Annotations: local read</div></div><div class="cap"><div class="cap-head"><code>read_paper</code><span class="cap-class read">read</span></div><div class="cap-fn">Load cached paper text into model context</div><div class="cap-anno">Annotations: untrusted content enters context</div></div></div></div><div class="subsection"><p class="subhead"><span class="dot" style="background:#9c5a44"></span>Authentication &amp; credential risk</p><dl class="kv2"><dt>Client auth</dt><dd>none</dd><dt>Downstream auth</dt><dd>anonymous public arXiv API</dd><dt>Token passthrough</dt><dd>No</dd><dt>Credential risk</dt><dd>low</dd><dt>Notes</dt><dd>No credentials exist to steal; host compromise yields only cached public papers.</dd></dl></div><div class="subsection"><p class="subhead"><span class="dot" style="background:#97793d"></span>Composition</p><p>For the requesting population (document store + email), read_paper adds continuous untrusted-content exposure alongside existing private-data access and an email send channel — the trifecta is complete. Standalone, the server is low risk.</p><p><b>Blast radius.</b> Whatever the pilot users&#x27; own document-store and email permissions reach; detection depends on email DLP and audit.</p></div></section><section class="block "><h2>Risk rating</h2><table class="risk-table"><thead><tr><th>Factor</th><th>Score (1–5)</th></tr></thead><tbody><tr><td>Provenance</td><td>3</td></tr><tr><td>Capability</td><td>2</td></tr><tr><td>Permissions</td><td>1</td></tr><tr><td>Hosting Exposure</td><td>2</td></tr><tr><td>Auth Strength</td><td>2</td></tr><tr><td>Credential Storage</td><td>1</td></tr><tr><td>Install Vector</td><td>3</td></tr><tr><td>Code Hygiene</td><td>2</td></tr><tr class="composite-row"><th>Composite</th><td><b>1.85</b></td></tr></tbody></table><p class="sub">Overrides: Composition completes the trifecta for this population -&gt; HIGH floor for that population absent conditions</p></section><section class="block "><h2>Limitations &amp; disclaimer</h2><div class="disclaimer">Point-in-time static assessment (code review) of the package at pin time. Not a warranty. Findings require independent verification before remediation decisions rely on them.<br><br>Findings are marked `reasoned` (static review); none were reproduced with a live proof-of-concept. The composition finding depends on the combined connected set. Run the validator skill to confirm.<br><br>Checks not performed (coverage gaps): sandbox-egress-verification.</div></section><section class="block"><h2>Appendix</h2><details class="appendix"><summary>Machine-readable assessment (assessment.json)</summary><pre>{
+  &quot;schema_version&quot;: 1,
+  &quot;meta&quot;: {
+    &quot;server_name&quot;: &quot;arxiv-mcp-server&quot;,
+    &quot;version_or_endpoint&quot;: &quot;pin exact version at install&quot;,
+    &quot;publisher&quot;: &quot;blazickjp (individual)&quot;,
+    &quot;source_url&quot;: &quot;github.com/blazickjp/arxiv-mcp-server&quot;,
+    &quot;source_commit_sha&quot;: &quot;7f3c9e2a1b4d6c8e0f2a4b6d8c0e2f4a6b8d0c2e&quot;,
+    &quot;assessed_date&quot;: &quot;2026-07-02&quot;,
+    &quot;assessor&quot;: &quot;Security Architecture&quot;,
+    &quot;tier&quot;: 2,
+    &quot;review_modes&quot;: [
+      &quot;code&quot;
+    ],
+    &quot;definition_hash_sha256&quot;: &quot;sha256:TBD-at-pinned-install&quot;,
+    &quot;scope_statement&quot;: &quot;Assess arxiv-mcp-server for researchers who already have a document store and email connectors.&quot;,
+    &quot;checks_not_performed&quot;: [
+      &quot;sandbox-egress-verification&quot;
+    ]
+  },
+  &quot;provenance&quot;: {
+    &quot;is_fork&quot;: false,
+    &quot;stars&quot;: 412,
+    &quot;forks&quot;: 47,
+    &quot;open_issues&quot;: 9,
+    &quot;last_activity&quot;: &quot;2026-06&quot;,
+    &quot;owner_type&quot;: &quot;user&quot;,
+    &quot;owner_followers&quot;: 380,
+    &quot;owner_public_repos&quot;: 41,
+    &quot;account_created&quot;: &quot;2019-05&quot;
+  },
+  &quot;verdict&quot;: &quot;connect_with_conditions&quot;,
+  &quot;overall_risk&quot;: {
+    &quot;rating&quot;: &quot;moderate&quot;,
+    &quot;composite&quot;: 1.85
+  },
+  &quot;executive_summary&quot;: {
+    &quot;posture&quot;: &quot;arxiv-mcp-server is a read-only, no-credential local server that fetches public arXiv papers into model context. Its own risk is low, but for the requesting population — who already hold a document store and email connectors — it adds the untrusted-content leg and completes the lethal trifecta. That composition risk, plus a name collision and an individual-maintainer supply chain, drive the rating; the conditions below reduce it.&quot;,
+    &quot;top_finding_ids&quot;: [
+      &quot;F-01&quot;,
+      &quot;F-02&quot;
+    ],
+    &quot;conditions&quot;: [
+      &quot;Managed install only: package the pinned PyPI version internally and block ad-hoc npm/npx installs of this name.&quot;,
+      &quot;Break the trifecta for the pilot: require confirmation on email-send in any session where read_paper has fired, or limit the pilot to users without the email connector.&quot;,
+      &quot;Run a sandbox verification before rollout: confirm egress is arxiv.org only and record the tool-definition hash.&quot;
+    ]
+  },
+  &quot;recommendations&quot;: [
+    {
+      &quot;priority&quot;: 1,
+      &quot;action&quot;: &quot;Managed install only — publish the pinned PyPI version internally and block ad-hoc npm/npx installs of this name (name-collision defense).&quot;,
+      &quot;finding_ids&quot;: [
+        &quot;F-02&quot;
+      ]
+    },
+    {
+      &quot;priority&quot;: 2,
+      &quot;action&quot;: &quot;Break the trifecta for the pilot population: gateway/client policy requiring confirmation on email-send once read_paper has fired, or restrict the pilot to users without the email connector.&quot;,
+      &quot;finding_ids&quot;: [
+        &quot;F-01&quot;
+      ]
+    },
+    {
+      &quot;priority&quot;: 3,
+      &quot;action&quot;: &quot;Sandbox verification run before rollout: confirm egress is arxiv.org only; record the tool-definition hash for rug-pull monitoring.&quot;
+    },
+    {
+      &quot;priority&quot;: 4,
+      &quot;action&quot;: &quot;Register in the inventory, wire definition-hash monitoring, and re-assess on version bump or in 12 months.&quot;
+    }
+  ],
+  &quot;findings&quot;: [
+    {
+      &quot;id&quot;: &quot;F-01&quot;,
+      &quot;title&quot;: &quot;Composition completes the lethal trifecta for the requesting population&quot;,
+      &quot;severity&quot;: &quot;high&quot;,
+      &quot;category&quot;: {
+        &quot;owasp_mcp_top10&quot;: &quot;Excessive Agency / Data Exfiltration&quot;,
+        &quot;review_part&quot;: &quot;composition&quot;
+      },
+      &quot;affected_component&quot;: &quot;read_paper (untrusted content) combined with the population&#x27;s existing connectors&quot;,
+      &quot;verification&quot;: &quot;reasoned&quot;,
+      &quot;status&quot;: &quot;open&quot;,
+      &quot;description&quot;: &quot;For the requesting population (already connected: a document store and corporate email), this server adds continuous untrusted-content exposure — paper text enters model context — alongside existing private-data access and an email send channel.&quot;,
+      &quot;impact&quot;: &quot;A crafted paper could instruct the agent to read document-store content and email it out. Not a defect in this server; a property of the combination.&quot;,
+      &quot;likelihood&quot;: &quot;Moderate — requires a crafted paper to reach the agent, which is plausible for a research workflow.&quot;,
+      &quot;evidence&quot;: {
+        &quot;location&quot;: &quot;combined connected set (composition analysis)&quot;,
+        &quot;detail&quot;: &quot;read_paper -&gt; untrusted content leg; existing document store -&gt; private-data leg; existing email -&gt; external-comms leg. All three legs present for the population.&quot;,
+        &quot;secret_masked&quot;: true
+      },
+      &quot;remediation&quot;: {
+        &quot;summary&quot;: &quot;Break a leg for the pilot: require confirmation on email-send after read_paper has fired, or scope the pilot to users without the email connector. Prefer a deterministic gateway control over relying on the model.&quot;,
+        &quot;control_ids&quot;: [
+          &quot;AGT-1&quot;,
+          &quot;AGT-3&quot;
+        ]
+      },
+      &quot;references&quot;: [
+        &quot;Lethal trifecta (simonwillison.net/2025/Jun/16/the-lethal-trifecta/)&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;F-02&quot;,
+      &quot;title&quot;: &quot;Cross-registry name collision invites a supply-chain swap&quot;,
+      &quot;severity&quot;: &quot;high&quot;,
+      &quot;category&quot;: {
+        &quot;owasp_mcp_top10&quot;: &quot;Supply Chain&quot;,
+        &quot;review_part&quot;: &quot;A&quot;
+      },
+      &quot;affected_component&quot;: &quot;package name (PyPI vs npm)&quot;,
+      &quot;verification&quot;: &quot;reasoned&quot;,
+      &quot;status&quot;: &quot;open&quot;,
+      &quot;description&quot;: &quot;An unrelated third-party npm package exists under the same name. The project itself warns that installs must use `uv tool install` from PyPI, not npm/npx.&quot;,
+      &quot;impact&quot;: &quot;A user who &#x27;npm installs&#x27; this name gets someone else&#x27;s code — a straightforward supply-chain substitution.&quot;,
+      &quot;likelihood&quot;: &quot;Moderate — easy to hit by habit; the correct install path is non-obvious.&quot;,
+      &quot;evidence&quot;: {
+        &quot;location&quot;: &quot;npm registry vs PyPI&quot;,
+        &quot;detail&quot;: &quot;Same name resolves to an unrelated npm package; upstream README warns: install via `uv tool install` from PyPI only.&quot;,
+        &quot;secret_masked&quot;: true
+      },
+      &quot;remediation&quot;: {
+        &quot;summary&quot;: &quot;Managed install only: publish the pinned PyPI version internally and block ad-hoc npm/npx installs of this name.&quot;,
+        &quot;control_ids&quot;: [
+          &quot;SUP-1&quot;
+        ]
+      },
+      &quot;references&quot;: [
+        &quot;OWASP MCP Top 10: Supply Chain&quot;
+      ]
+    }
+  ],
+  &quot;technical_assessment&quot;: {
+    &quot;profile&quot;: {
+      &quot;purpose&quot;: &quot;Bridges AI assistants to arXiv: search, download, and read paper content into model context, with local caching.&quot;,
+      &quot;creator_publisher&quot;: &quot;Individual maintainer (blazickjp), ~400 stars&quot;,
+      &quot;maintenance_signals&quot;: &quot;Active in 2026; single primary maintainer.&quot;,
+      &quot;license&quot;: &quot;Open source (verify current file at pin time)&quot;
+    },
+    &quot;capabilities&quot;: [
+      {
+        &quot;name&quot;: &quot;search_papers&quot;,
+        &quot;function&quot;: &quot;Query arXiv by keyword, author, or category&quot;,
+        &quot;class&quot;: &quot;read&quot;,
+        &quot;annotations&quot;: &quot;openWorldHint&quot;
+      },
+      {
+        &quot;name&quot;: &quot;download_paper&quot;,
+        &quot;function&quot;: &quot;Fetch a paper (HTML/PDF) to the local cache&quot;,
+        &quot;class&quot;: &quot;write&quot;,
+        &quot;annotations&quot;: &quot;writes local cache only&quot;
+      },
+      {
+        &quot;name&quot;: &quot;list_papers&quot;,
+        &quot;function&quot;: &quot;List locally cached papers&quot;,
+        &quot;class&quot;: &quot;read&quot;,
+        &quot;annotations&quot;: &quot;local read&quot;
+      },
+      {
+        &quot;name&quot;: &quot;read_paper&quot;,
+        &quot;function&quot;: &quot;Load cached paper text into model context&quot;,
+        &quot;class&quot;: &quot;read&quot;,
+        &quot;annotations&quot;: &quot;untrusted content enters context&quot;
+      }
+    ],
+    &quot;permissions&quot;: [
+      &quot;No credentials or OAuth scopes&quot;,
+      &quot;Filesystem: one configurable cache directory&quot;,
+      &quot;Network: arxiv.org egress only by design (verify in sandbox)&quot;
+    ],
+    &quot;hosting&quot;: {
+      &quot;hosting_model&quot;: &quot;local_stdio&quot;,
+      &quot;install_methods&quot;: [
+        &quot;uv tool install (PyPI)&quot;,
+        &quot;mcpb desktop bundle&quot;
+      ],
+      &quot;install_time_behavior&quot;: &quot;Standard Python package; no fetch-and-execute observed in the install path.&quot;,
+      &quot;data_residency&quot;: &quot;Local (public arXiv content plus local cache)&quot;
+    },
+    &quot;protocols&quot;: {
+      &quot;mcp_spec_version&quot;: &quot;verify-at-pin&quot;,
+      &quot;transport&quot;: [
+        &quot;stdio&quot;
+      ],
+      &quot;forward_compat_notes&quot;: &quot;No sessions; no Roots/Sampling dependence observed; low 2026-07-28 migration exposure.&quot;
+    },
+    &quot;authentication_and_credential_risk&quot;: {
+      &quot;auth_client_to_server&quot;: &quot;none&quot;,
+      &quot;auth_downstream&quot;: &quot;anonymous public arXiv API&quot;,
+      &quot;token_passthrough&quot;: false,
+      &quot;stored_credential_risk&quot;: &quot;low&quot;,
+      &quot;notes&quot;: &quot;No credentials exist to steal; host compromise yields only cached public papers.&quot;
+    },
+    &quot;composition&quot;: {
+      &quot;trifecta_complete&quot;: true,
+      &quot;analysis&quot;: &quot;For the requesting population (document store + email), read_paper adds continuous untrusted-content exposure alongside existing private-data access and an email send channel — the trifecta is complete. Standalone, the server is low risk.&quot;,
+      &quot;blast_radius&quot;: &quot;Whatever the pilot users&#x27; own document-store and email permissions reach; detection depends on email DLP and audit.&quot;
+    }
+  },
+  &quot;risk_rating&quot;: {
+    &quot;factor_scores&quot;: {
+      &quot;provenance&quot;: 3,
+      &quot;capability&quot;: 2,
+      &quot;permissions&quot;: 1,
+      &quot;hosting_exposure&quot;: 2,
+      &quot;auth_strength&quot;: 2,
+      &quot;credential_storage&quot;: 1,
+      &quot;install_vector&quot;: 3,
+      &quot;code_hygiene&quot;: 2
+    },
+    &quot;composite&quot;: 1.85,
+    &quot;overrides_applied&quot;: [
+      &quot;Composition completes the trifecta for this population -&gt; HIGH floor for that population absent conditions&quot;
+    ]
+  },
+  &quot;limitations&quot;: {
+    &quot;disclaimer&quot;: &quot;Point-in-time static assessment (code review) of the package at pin time. Not a warranty. Findings require independent verification before remediation decisions rely on them.&quot;,
+    &quot;verification_note&quot;: &quot;Findings are marked `reasoned` (static review); none were reproduced with a live proof-of-concept. The composition finding depends on the combined connected set. Run the validator skill to confirm.&quot;
+  }
+}</pre></details></section><p class="footer">Generated from a schema-validated assessment.json · point-in-time · see Limitations.</p></div></body></html>
