@@ -3,6 +3,10 @@
 This script evaluates MCP servers by running test questions against them using Claude.
 """
 
+# Adapted (modified) from the "mcp-builder" skill in anthropics/skills
+# (https://github.com/anthropics/skills), licensed under Apache-2.0.
+# See LICENSE.txt in this directory.
+
 import argparse
 import asyncio
 import json

@@ -54,4 +54,10 @@ Conventions for authoring skills in this repo live in [CLAUDE.md](CLAUDE.md). Th
 
 ## License
 
-[MIT](LICENSE).
+[MIT](LICENSE) covers the skills and their original content.
+
+One bundled component is third-party: the capability-eval harness under
+`skills/secure-mcp-builder/scripts/` (`evaluation.py`, `connections.py`,
+`example_evaluation.xml`) is adapted from the [`mcp-builder`](https://github.com/anthropics/skills)
+skill in `anthropics/skills` and remains under the Apache License 2.0 — see
+`skills/secure-mcp-builder/scripts/LICENSE.txt`.
