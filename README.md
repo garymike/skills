@@ -38,6 +38,14 @@ Skills split on one axis: who can invoke them. **User-invoked** skills run only 
 
 - **[github-security-audit](skills/github-security-audit/SKILL.md)** — Audit a GitHub account and all repositories for security misconfigurations, then fix findings interactively. Covers Dependabot, secret scanning, branch protection, Actions permissions, action version pinning, CodeQL, SECURITY.md, and visibility intent. Pairs with [garymike/security-workflows](https://github.com/garymike/security-workflows) (reusable GHA enforcement) and [garymike/repo-template](https://github.com/garymike/repo-template) (pre-wired new repo template) for a full defense-in-depth setup.
 
+### MCP security
+
+**Model-invoked**
+
+- **[mcp-security-review](skills/mcp-security-review/SKILL.md)** — Assess any MCP server (vendor, open-source, or first-party; local or remote) as a security architect and produce a standardized, risk-rated report: identity, capabilities, permissions, auth, credential risk, findings, and a computed rating. Chooses review modes by available access (code / live / sandbox), authors a schema-valid `assessment.json`, and renders it to HTML + Markdown. Pairs with [garymike/security-workflows](https://github.com/garymike/security-workflows) (the `mcp-review-toolbox` it can drive) and the `mcp-reviewer` agent in [garymike/security-agents](https://github.com/garymike/security-agents).
+
+- **[secure-mcp-builder](skills/secure-mcp-builder/SKILL.md)** — Design, threat-model, build, and harden production-grade MCP servers (Python or TypeScript, stdio or remote HTTP). Four phases with a required threat model and review gate, a normative security-requirements catalog mapped to the MCP spec and the OWASP MCP/Agentic Top 10, and a bundled capability-eval harness. The build-side complement to `mcp-security-review`.
+
 More skills land here as I build them.
 
 ## Writing your own

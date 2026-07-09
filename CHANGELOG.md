@@ -6,6 +6,20 @@ All notable changes to this repo are documented here. Versions match the
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-07-08
+
+### Added
+- **mcp-security-review** skill: assess any MCP server (vendor, open-source, or
+  first-party) as a security architect and produce a standardized, risk-rated
+  assessment — review modes (code / live / sandbox), a computed risk model, and a
+  schema-valid `assessment.json` rendered to HTML + Markdown. Previously developed
+  privately; now public.
+- **secure-mcp-builder** skill: design, threat-model, build, and harden
+  production-grade MCP servers (Python or TypeScript, stdio or remote HTTP) through
+  four phases with a required threat model and review gate, a normative
+  security-requirements catalog, and a bundled capability-eval harness. Previously
+  developed privately; now public.
+
 ## [0.2.1] - 2026-07-02
 
 ### Added

@@ -1,7 +1,7 @@
 {
   "name": "garymike-skills",
-  "version": "0.2.1",
-  "description": "A growing collection of practical Agent Skills. Currently: github-profile (design, build, and deploy a GitHub profile README) and github-security-audit (audit and harden GitHub account and repositories).",
+  "version": "0.3.0",
+  "description": "A growing collection of practical Agent Skills: github-profile (design, build, and deploy a GitHub profile README), github-security-audit (audit and harden GitHub account and repositories), mcp-security-review (risk-rate any MCP server), and secure-mcp-builder (build and harden secure MCP servers).",
   "author": {
     "name": "Michael",
     "url": "https://github.com/garymike"

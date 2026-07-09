@@ -1,0 +1,100 @@
+{
+  "skill_name": "mcp-security-review",
+  "evals": [
+    {
+      "id": 1,
+      "eval_name": "assess-oss-package-full-report",
+      "prompt": "Act as our security architect and assess this MCP server for us: 'arxiv-mcp-server' on GitHub (individual maintainer, ~400 stars, pip installable, stdio transport, tools for searching and downloading arXiv papers, no auth required). Our researchers want it; they already have a document store and email connectors. Give me your assessment report.",
+      "expected_output": "A schema-valid assessment.json rendered to the standard report: technical assessment (profile, capabilities, permissions, hosting, protocols, auth (none) and credential risk), a composition section flagging trifecta completion with the document store/email, factor-scored risk_rating with the composite shown, recommendations, and the embedded machine-readable assessment.json",
+      "files": [],
+      "assertions": [
+        {
+          "text": "Emits an assessment.json that validates against schema/assessment.schema.json and renders (via scripts/render_report.py) to the standard report: verdict-first executive summary, recommendations, scope & methodology, findings, technical assessment (profile, capabilities, permissions, hosting, protocols, authentication and stored credential risk, composition), risk rating, limitations",
+          "type": "content"
+        },
+        {
+          "text": "Composition section evaluates the lethal trifecta across the combined set with the document store and email connectors, not the candidate alone (paper download/fetch as untrusted content or exfil leg)",
+          "type": "content"
+        },
+        {
+          "text": "risk_rating carries the eight factor_scores and the composite, overall_risk.rating follows the model, and any overrides_applied are listed",
+          "type": "content"
+        },
+        {
+          "text": "Individual/unknown publisher and maintenance signals scored under provenance; typosquat verification and dependency scan called for",
+          "type": "content"
+        },
+        {
+          "text": "The machine-readable record is the assessment.json itself (embedded in the report's collapsed appendix), complete and with meta.definition_hash_sha256 populated (a value or an explicit placeholder)",
+          "type": "content"
+        },
+        {
+          "text": "Security-relevant unknowns are marked unknown and treated as risk-raising, not ignored",
+          "type": "content"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "eval_name": "critical-findings-lead-report",
+      "prompt": "Review this internally-built MCP server before we expand it beyond the pilot group. Facts from the repo: Python stdio server for our CRM; a config.py containing CRM_API_KEY = 'sk-live-...' committed to the repo; one tool crm_run_query(query: str) that executes arbitrary queries passed by the model; descriptions look normal; deps pinned and scanned clean.",
+      "expected_output": "Report leads with Critical (hardcoded live credential) and High (arbitrary-query god-tool) findings; overall CRITICAL via override regardless of clean deps; concrete remediations (secret rotation and vault, constrained tool redesign per secure-mcp-builder); first-party origin does not soften the assessment",
+      "files": [],
+      "assertions": [
+        {
+          "text": "Hardcoded live API key identified as a Critical finding with immediate remediation: rotate the credential (not just remove from code) and move to vault/env injection",
+          "type": "content"
+        },
+        {
+          "text": "crm_run_query arbitrary-query tool flagged as a god-tool / injection blast-radius finding with redesign guidance toward constrained, single-responsibility tools",
+          "type": "content"
+        },
+        {
+          "text": "The verdict-first executive summary leads (verdict do_not_connect, critical rating, severity counts, top findings) so the Critical/High findings surface above the descriptive sections",
+          "type": "content"
+        },
+        {
+          "text": "Overall risk is CRITICAL via override despite clean dependency scan, with recommendation do_not_connect or reassess-after-fix",
+          "type": "content"
+        },
+        {
+          "text": "Being first-party does not reduce scrutiny; report notes handoff to secure-mcp-builder practices for the redesign",
+          "type": "content"
+        },
+        {
+          "text": "assessment.json validates against schema/assessment.schema.json; the Critical hardcoded-secret finding carries redacted evidence (secret_masked true, a masked value — never the live key) and remediation.control_ids linking the fix to controls",
+          "type": "content"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "eval_name": "rug-pull-reassessment",
+      "prompt": "Our approved ticketing MCP connector (assessed 4 months ago, definition hash on file) pushed an update and monitoring shows the tool-definition hash changed. Changelog says 'minor improvements'. What's the process and what does the updated report look like?",
+      "expected_output": "Treats hash change as re-assessment trigger and possible rug pull; diff current definitions against recorded hash; changelog not accepted as evidence; scoped re-assessment (diff plus composition); report updated with new hash and any rating change; register updated",
+      "files": [],
+      "assertions": [
+        {
+          "text": "Definition-hash change recognized as a formal re-assessment trigger and potential rug pull; changelog claims explicitly not accepted as evidence",
+          "type": "content"
+        },
+        {
+          "text": "Directs obtaining current tool definitions and diffing against the recorded reviewed hash/definitions",
+          "type": "content"
+        },
+        {
+          "text": "Re-assessment scoped to the diff plus composition impact for a clean minor diff, not a full restart",
+          "type": "content"
+        },
+        {
+          "text": "Updated report/record captures the new definition hash and states whether the overall risk rating changed",
+          "type": "content"
+        },
+        {
+          "text": "Suspension judgment addressed if the diff is unavailable or suspicious",
+          "type": "content"
+        }
+      ]
+    }
+  ]
+}
