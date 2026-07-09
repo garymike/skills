@@ -10,6 +10,10 @@ Neither blocks today; both are flagged so the migration is deliberate, not a
 silent breakage.
 """
 
+# Adapted (modified) from the "mcp-builder" skill in anthropics/skills
+# (https://github.com/anthropics/skills), licensed under Apache-2.0.
+# See LICENSE.txt in this directory.
+
 from abc import ABC, abstractmethod
 from contextlib import AsyncExitStack
 from typing import Any
