@@ -36,7 +36,7 @@ Normative control catalog for first-party MCP servers. MUST items block the revi
 
 - **ST-1 (MUST)** No security decision ever depends on a session ID. If sessions exist (pre-2026 transports), IDs are generated from a CSPRNG, bound server-side to the authenticated user (key format `user_id:session_id`), expiring, and revocable. [SPEC session hijacking]
 - **ST-2 (MUST)** Design stateless-first: any cross-call state is an explicit, opaque handle that is user-bound, expiring, and validated on use. Handles are capability tokens; treat them like credentials. [2026-07-28 direction]
-- **ST-3 (MUST)** TLS 1.2+ on all remote transports; HSTS on public endpoints.
+- **ST-3 (MUST)** TLS 1.2+ on all remote transports; HSTS on public endpoints. Where a gateway/proxy fronts the server, or in service-to-service deployments, prefer mutual TLS (mTLS) — both peers present signed certificates — so unauthenticated components cannot reach the server.
 - **ST-4 (SHOULD, high-assurance)** Message-level integrity beyond TLS: sign JSON-RPC payloads with an identity-bound asymmetric key, include a unique nonce and timestamp per message, reject duplicates and stale timestamps (replay defense), verify mutually, and fail closed on any verification failure. TLS does not protect against tampering after termination; adopt this where proxies or middleware sit between TLS termination and the server, or where regulatory assurance demands it. Beyond current spec requirements and needs client cooperation; document the decision either way in the threat model.
 
 ## 5. Secrets and configuration
@@ -57,8 +57,8 @@ Normative control catalog for first-party MCP servers. MUST items block the revi
 ## 7. Supply chain and deployment
 
 - **SUP-1 (MUST)** Dependencies pinned with a lockfile; automated vulnerability scanning (e.g. pip-audit/npm audit or org scanner) and SAST in CI; builds reproducible.
-- **SUP-2 (MUST)** Generate an SBOM per release; sign or hash-attest release artifacts.
-- **SUP-3 (MUST)** Containerized servers run as non-root, read-only filesystem where possible, minimal base image, no docker socket, explicit egress policy.
+- **SUP-2 (MUST)** Generate an SBOM per release; sign or hash-attest release artifacts (e.g. Sigstore/cosign, or SLSA provenance) so consumers can verify authorship and pin by digest with an integrity guarantee. CI rejects unsigned artifacts.
+- **SUP-3 (MUST)** Containerized servers run as non-root, read-only filesystem where possible, minimal base image, no docker socket, and an explicit default-deny egress allowlist. Disable privilege escalation (`no-new-privileges`, drop Linux capabilities) and attach a seccomp profile (plus AppArmor/SELinux where available) to shrink the kernel syscall surface. Set CPU and memory limits so a compromised server cannot crypto-mine or run up a denial-of-wallet bill.
 - **SUP-4 (MUST)** The server is registered in your MCP server inventory with owner, data classification, scopes, and deployment location. Unregistered servers are shadow MCP servers and are treated as incidents. [MCP10 shadow servers]
 - **SUP-5 (SHOULD)** Version tools and the server semantically; breaking tool changes follow a deprecation window so clients are not silently retrained onto different behavior (rug pull defense).
 - **SUP-6 (SHOULD)** Publish a canonical tool-definition manifest per release: a SHA-256 per tool over its name, description, input/output schemas, and annotations, plus a set hash over all tools. Compute it with `scripts/hash_tool_definitions.py`, which pins the canonicalization (sorted keys, UTF-8, no whitespace, tools sorted by name) so the manifest is reproducible and matches what an assessor recomputes with the identical script in mcp-security-review. Lets clients and gateways pin definitions and detect post-approval mutation, including annotation flips; any manifest change is a versioned, announced release, never a silent update.
@@ -79,5 +79,6 @@ Primary sources this catalog derives from; consult when a control needs deeper c
 - OWASP MCP Security Cheat Sheet: cheatsheetseries.owasp.org/cheatsheets/MCP_Security_Cheat_Sheet.html
 - OWASP MCP Top 10: owasp.org/www-project-mcp-top-10
 - OWASP Top 10 for Agentic Applications 2026: genai.owasp.org
+- Wiz, Model Context Protocol (MCP) security best practices (cheat sheet): wiz.io — supply-chain signing, least privilege, sandboxing (non-root/seccomp/egress/quotas), gateway controls (informs SUP-2/3, ST-3)
 - OAuth 2.0 Security Best Current Practice: RFC 9700
 - Anthropic, Writing effective tools for agents: anthropic.com/engineering/writing-tools-for-agents

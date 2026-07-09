@@ -39,7 +39,7 @@ Complete for every server before ship and after any material change. Every MUST 
 - [ ] No secrets in code, repo, images, descriptions, or logs; startup fails closed (SEC-1/2)
 - [ ] Structured audit log per invocation with principal and redaction; denials logged as security events (LOG-1/2/4)
 - [ ] Dependencies pinned; vuln scan and SAST green in CI; SBOM generated (SUP-1/2)
-- [ ] (Containerized) non-root, minimal image, egress policy defined (SUP-3)
+- [ ] (Containerized) non-root, read-only fs, minimal image, no-new-privileges + dropped caps + seccomp/AppArmor, CPU/memory limits, default-deny egress allowlist (SUP-3)
 
 ## Gate E: Testing evidence
 
