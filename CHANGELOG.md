@@ -6,6 +6,17 @@ All notable changes to this repo are documented here. Versions match the
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-07-08
+
+### Changed
+- **secure-mcp-builder:** harden deployment/supply-chain controls against the Wiz
+  MCP security best-practices cheat sheet. `SUP-2` now names Sigstore/cosign + SLSA
+  attestation and CI rejection of unsigned artifacts; `SUP-3` adds seccomp/AppArmor,
+  `no-new-privileges` + capability drop, and CPU/memory limits (denial-of-wallet);
+  `ST-3` and the gateway-topology guide name mutual TLS (mTLS) for fronted and
+  service-to-service deployments; the review-gate checklist mirrors the expanded
+  `SUP-3`. Added Wiz to the sources list.
+
 ## [0.3.1] - 2026-07-08
 
 ### Changed

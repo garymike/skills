@@ -51,7 +51,7 @@ Prefer **Client ID Metadata Documents (CIMD)** where supported: the client_id is
 
 ## Deployment topology: gateway in front, controls still inside
 
-For remote servers, front the fleet with a gateway (API gateway or MCP-aware gateway): central TLS termination, coarse rate limiting, IP/geo policy, request size caps, traffic logging, and a single chokepoint for the SOC. Under the 2026-07-28 spec, gateways route on the `Mcp-Method`/`Mcp-Name` headers, so tool-level policy at the edge gets cheap.
+For remote servers, front the fleet with a gateway (API gateway or MCP-aware gateway): central TLS termination, coarse rate limiting, IP/geo policy, request size caps, traffic logging, and a single chokepoint for the SOC. Enforce mutual TLS (mTLS) between the gateway and each server so servers accept traffic only from the gateway (never direct, unauthenticated hits), and have the gateway refuse any server whose image digest isn't on the allowlist. Under the 2026-07-28 spec, gateways route on the `Mcp-Method`/`Mcp-Name` headers, so tool-level policy at the edge gets cheap.
 
 Hard caveat: the gateway complements in-server controls and never replaces them. Token audience validation, per-tool scope checks, per-resource entitlement, input validation, and SSRF controls are the server's job; a gateway cannot see enough context to enforce them, and a gateway bypass (or east-west traffic) must not equal a security bypass. Design every server to be safe if hit directly, then add the gateway as depth.
 
