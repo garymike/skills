@@ -6,6 +6,15 @@ All notable changes to this repo are documented here. Versions match the
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-07-08
+
+### Changed
+- **secure-mcp-builder:** add explicit third-party attribution for the bundled
+  capability-eval harness (`scripts/evaluation.py`, `scripts/connections.py`) — adapted
+  from the `mcp-builder` skill in anthropics/skills (Apache-2.0). Adds per-file
+  "modified from" headers and a third-party note in the README License section
+  (Apache-2.0 §4(b)/(c) compliance). No functional change.
+
 ## [0.3.0] - 2026-07-08
 
 ### Added
