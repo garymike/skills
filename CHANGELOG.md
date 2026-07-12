@@ -6,6 +6,19 @@ All notable changes to this repo are documented here. Versions match the
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-07-11
+
+### Added
+- **skill-security-review** (new, model-invoked): assess any agent skill across BOTH execution surfaces — the
+  agent-execution surface (`SKILL.md` + agent-invoked scripts: prompt injection, tool poisoning, memory poisoning)
+  and the **developer-execution surface** (bundled test files, git hooks, npm/pip lifecycle scripts that auto-run
+  on `npm test` / `git commit` / `npm install`, outside the agent — the blind spot skill scanners miss). Ships a
+  two-surface inspection checklist, factor-based risk scoring (developer-execution criticals override), a data-first
+  report pipeline with `schema/assessment.schema.json` (`skill-assessment/v1`), and
+  `scripts/hash_skill_definitions.py` for rug-pull detection. The assessor-side methodology behind the
+  `skill-auditor` agent ([security-agents](https://github.com/garymike/security-agents)); sibling of
+  `mcp-security-review`.
+
 ## [0.3.2] - 2026-07-08
 
 ### Changed
