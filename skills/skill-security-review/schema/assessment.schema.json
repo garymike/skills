@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/garymike/skills/skill-security-review/schema/assessment.schema.json",
+  "title": "skill-assessment/v1",
+  "description": "A standardized, risk-rated security assessment of an agent skill, across both execution surfaces.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "skill", "verdict", "severity_counts", "coverage", "surfaces", "findings"],
+  "properties": {
+    "schema": { "const": "skill-assessment/v1" },
+    "skill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "source", "definition_sha256"],
+      "properties": {
+        "name": { "type": "string" },
+        "author": { "type": "string" },
+        "source": { "type": "string", "description": "repo / marketplace / local path" },
+        "version": { "type": "string" },
+        "pinned_commit": { "type": "string", "description": "the point-in-time anchor SHA" },
+        "install_model": { "enum": ["user-invoked", "model-invoked", "unknown"] },
+        "definition_sha256": { "type": "string", "description": "hash of the whole bundled surface (hash_skill_definitions.py) — the rug-pull anchor" }
+      }
+    },
+    "verdict": { "enum": ["BLOCK", "CAUTION", "CLEAR"] },
+    "severity_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["critical", "high", "medium", "low"],
+      "properties": {
+        "critical": { "type": "integer", "minimum": 0 },
+        "high": { "type": "integer", "minimum": 0 },
+        "medium": { "type": "integer", "minimum": 0 },
+        "low": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modes", "scanners", "detonated"],
+      "properties": {
+        "modes": { "type": "array", "items": { "enum": ["source", "local", "sandbox"] } },
+        "scanners": { "type": "array", "items": { "type": "string" } },
+        "detonated": { "type": "boolean", "description": "was the developer-execution surface confirmed by execution?" }
+      }
+    },
+    "surfaces": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "agent_execution": { "type": "array", "items": { "type": "string" }, "description": "bundled files on the agent-execution surface" },
+        "developer_execution": { "type": "array", "items": { "type": "string" }, "description": "auto-run files: tests, hooks, lifecycle scripts" }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["surface", "severity", "title", "remediation"],
+        "properties": {
+          "surface": { "enum": ["agent_execution", "developer_execution", "provenance", "composition"] },
+          "severity": { "enum": ["critical", "high", "medium", "low"] },
+          "title": { "type": "string" },
+          "evidence": { "type": "string", "description": "redacted, file:line" },
+          "remediation": { "type": "string" }
+        }
+      }
+    },
+    "score": {
+      "type": "object",
+      "properties": {
+        "factors": { "type": "object" },
+        "total": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "limitations": { "type": "array", "items": { "type": "string" } }
+  }
+}

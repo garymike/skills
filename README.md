@@ -46,6 +46,12 @@ Skills split on one axis: who can invoke them. **User-invoked** skills run only 
 
 - **[secure-mcp-builder](skills/secure-mcp-builder/SKILL.md)** — Design, threat-model, build, and harden production-grade MCP servers (Python or TypeScript, stdio or remote HTTP). Four phases with a required threat model and review gate, a normative security-requirements catalog mapped to the MCP spec and the OWASP MCP/Agentic Top 10, and a bundled capability-eval harness. The build-side complement to `mcp-security-review`.
 
+### Skill security
+
+**Model-invoked**
+
+- **[skill-security-review](skills/skill-security-review/SKILL.md)** — Assess any agent skill across BOTH execution surfaces: the agent-execution surface (`SKILL.md` + agent-invoked scripts — prompt injection, tool poisoning, memory poisoning) AND the developer-execution surface (bundled test files, git hooks, and npm/pip lifecycle scripts that auto-run on `npm test` / `git commit` / `npm install`, outside the agent, with the developer's own permissions — the blind spot every skill scanner misses). Authors a schema-valid `assessment.json`, findings-first. The methodology behind the `skill-auditor` agent in [garymike/security-agents](https://github.com/garymike/security-agents); escalates from the `skill-testfile-gate` in [garymike/security-workflows](https://github.com/garymike/security-workflows).
+
 More skills land here as I build them.
 
 ## Writing your own
