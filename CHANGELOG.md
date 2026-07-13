@@ -6,6 +6,15 @@ All notable changes to this repo are documented here. Versions match the
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-07-11
+
+### Changed
+- **skill-security-review:** corrected the developer-execution-surface framing from "the blind spot every skill
+  scanner misses" to the accurate "a surface advisory scanners flag but don't *gate* on." SkillSpector v2.3+ scans
+  bundled `.husky/`/`package.json` and reports the payload (HIGH), but exits 0 (no fail-on) — so a CI gate on exit
+  codes still lets it through; the enforcing gate (`skill-testfile-gate`) is what stops it, and the research SOTA
+  still misses the surface by scope. Wording only; the two-surface methodology is unchanged.
+
 ## [0.4.0] - 2026-07-11
 
 ### Added
