@@ -4,13 +4,13 @@
     "name": "Michael",
     "url": "https://github.com/garymike"
   },
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "A growing collection of practical Agent Skills: github-profile (design, build, and deploy a GitHub profile README), github-security-audit (audit and harden GitHub account and repositories), mcp-security-review (risk-rate any MCP server), secure-mcp-builder (build and harden secure MCP servers), and skill-security-review (risk-rate any agent skill on both execution surfaces).",
   "plugins": [
     {
       "name": "garymike-skills",
       "source": "./",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "description": "A growing collection of practical Agent Skills: github-profile (design, build, and deploy a GitHub profile README), github-security-audit (audit and harden GitHub account and repositories), mcp-security-review (risk-rate any MCP server), secure-mcp-builder (build and harden secure MCP servers), and skill-security-review (risk-rate any agent skill on both execution surfaces).",
       "keywords": ["skills", "agent-skills", "claude", "developer-tools", "security"]
     }

@@ -1,6 +1,6 @@
 ---
 name: skill-security-review
-description: Assess ANY agent skill (Claude Code / Cursor / Copilot / plugin skill, marketplace or bespoke, local or cloned) as a senior security and AI architect and produce a standardized, risk-rated assessment. Covers BOTH execution surfaces - the agent-execution surface (SKILL.md instructions and the scripts the agent invokes - prompt injection, tool poisoning, memory-file poisoning) AND the developer-execution surface (bundled test files, git hooks, and npm/pip lifecycle scripts that auto-run on npm test / git commit / npm install, outside the agent, with the developer's own permissions - the blind spot every skill scanner misses). Use when someone asks to review, assess, vet, audit, or risk-rate an agent skill, asks is it safe to install skill X, mentions a malicious skill, a test-file or git-hook payload, memory poisoning, or a rug pull in a skill, or wants a skill risk report; covers first-time and re-assessments. Do NOT use to build or modify skills.
+description: Assess ANY agent skill (Claude Code / Cursor / Copilot / plugin skill, marketplace or bespoke, local or cloned) as a senior security and AI architect and produce a standardized, risk-rated assessment. Covers BOTH execution surfaces - the agent-execution surface (SKILL.md instructions and the scripts the agent invokes - prompt injection, tool poisoning, memory-file poisoning) AND the developer-execution surface (bundled test files, git hooks, and npm/pip lifecycle scripts that auto-run on npm test / git commit / npm install, outside the agent, with the developer's own permissions - a surface advisory scanners flag but do not gate on). Use when someone asks to review, assess, vet, audit, or risk-rate an agent skill, asks is it safe to install skill X, mentions a malicious skill, a test-file or git-hook payload, memory poisoning, or a rug pull in a skill, or wants a skill risk report; covers first-time and re-assessments. Do NOT use to build or modify skills.
 ---
 
 # Skill Security Review
@@ -15,9 +15,9 @@ Core stance: **an agent skill is code with TWO execution surfaces, and most revi
   context (prompt injection, tool poisoning, memory-file poisoning) and under the agent's tools.
 - The **developer-execution surface** — bundled test files, git hooks, and `npm`/`pip` lifecycle scripts — is
   auto-run by the *developer's toolchain* on `npm test` / `git commit` / `npm install`, **outside the agent, with
-  the developer's own permissions.** A skill can ship a clean `SKILL.md` that every scanner passes and still steal
-  SSH keys the moment someone runs the project's tests (the "Gecko" vector). **Assess both surfaces, or you have
-  assessed nothing.**
+  the developer's own permissions.** A skill can ship a clean `SKILL.md` and a bundled payload that scanners flag
+  only *advisorily* (they report it but exit 0, never failing the build) and still steal SSH keys the moment
+  someone runs the project's tests (the "Gecko" vector). **Assess both surfaces, or you have assessed nothing.**
 
 This skill is the assessor-side methodology; the [`skill-auditor`](https://github.com/garymike/security-agents)
 Tier-2 agent wires the tools that execute it, and the Tier-1 `skill-testfile-gate`
@@ -126,8 +126,8 @@ The checklist and scoring cover both surfaces against the field's evidence base:
   bundled-script skills 2.12× more likely), *Cloak and Detonate* (arXiv 2607.02357 — static scanners are evadable,
   dynamic detonation is load-bearing), Snyk *ToxicSkills* (memory-file poisoning, curl|bash, base64-eval), NVIDIA
   **SkillSpector**.
-- **Developer-execution surface:** the **Gecko / VentureBeat** test-file vector (all three major skill scanners
-  share this blind spot; `npx skills add` copies the whole directory; test runners and git hooks auto-discover),
+- **Developer-execution surface:** the **Gecko / VentureBeat** test-file vector (skill scanners report it but
+  don't *gate* on it — advisory, exit 0; `npx skills add` copies the whole directory; test runners + hooks auto-run),
   Datadog Security Labs (a cloned repo introduces skills without explicit install → re-review on pull), Koi Security
   **ClawHavoc** (341 malicious skills → SSH/keychain/crypto exfil).
 
