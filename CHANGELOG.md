@@ -11,17 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **skill-security-review:** corrected the developer-execution-surface framing from "the blind spot every skill
   scanner misses" to the accurate "a surface advisory scanners flag but don't *gate* on." SkillSpector v2.3+ scans
-  bundled `.husky/`/`package.json` and reports the payload (HIGH), but exits 0 (no fail-on) — so a CI gate on exit
+  bundled `.husky/`/`package.json` and reports the payload (HIGH), but exits 0 (no fail-on), so a CI gate on exit
   codes still lets it through; the enforcing gate (`skill-testfile-gate`) is what stops it, and the research SOTA
   still misses the surface by scope. Wording only; the two-surface methodology is unchanged.
 
 ## [0.4.0] - 2026-07-11
 
 ### Added
-- **skill-security-review** (new, model-invoked): assess any agent skill across BOTH execution surfaces — the
+- **skill-security-review** (new, model-invoked): assess any agent skill across both execution surfaces: the
   agent-execution surface (`SKILL.md` + agent-invoked scripts: prompt injection, tool poisoning, memory poisoning)
   and the **developer-execution surface** (bundled test files, git hooks, npm/pip lifecycle scripts that auto-run
-  on `npm test` / `git commit` / `npm install`, outside the agent — the blind spot skill scanners miss). Ships a
+  on `npm test` / `git commit` / `npm install`, outside the agent, the blind spot skill scanners miss). Ships a
   two-surface inspection checklist, factor-based risk scoring (developer-execution criticals override), a data-first
   report pipeline with `schema/assessment.schema.json` (`skill-assessment/v1`), and
   `scripts/hash_skill_definitions.py` for rug-pull detection. The assessor-side methodology behind the
@@ -43,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **secure-mcp-builder:** add explicit third-party attribution for the bundled
-  capability-eval harness (`scripts/evaluation.py`, `scripts/connections.py`) — adapted
+  capability-eval harness (`scripts/evaluation.py`, `scripts/connections.py`), adapted
   from the `mcp-builder` skill in anthropics/skills (Apache-2.0). Adds per-file
   "modified from" headers and a third-party note in the README License section
   (Apache-2.0 §4(b)/(c) compliance). No functional change.
@@ -53,7 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **mcp-security-review** skill: assess any MCP server (vendor, open-source, or
   first-party) as a security architect and produce a standardized, risk-rated
-  assessment — review modes (code / live / sandbox), a computed risk model, and a
+  assessment: review modes (code / live / sandbox), a computed risk model, and a
   schema-valid `assessment.json` rendered to HTML + Markdown. Previously developed
   privately; now public.
 - **secure-mcp-builder** skill: design, threat-model, build, and harden
@@ -65,7 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.1] - 2026-07-02
 
 ### Added
-- **github-profile:** substance-intake prompts — Signature achievements
+- **github-profile:** substance-intake prompts: Signature achievements
   (quantified), Credentials, and Collaboration.
 - **github-profile:** assembly rule preferring quantified impact over adjectives.
 - **github-profile:** privacy guard so a private repo's name or description is
