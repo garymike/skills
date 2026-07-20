@@ -4,6 +4,8 @@ My personal [Agent Skills](https://agentskills.io). Straight from my `.claude` d
 
 Small, composable skills that encode repeatable engineering and workflow discipline. They work with any model, are easy to adapt, and are meant to be forked and made your own.
 
+Several of these are the methodology tier of a small security platform. `mcp-security-review`, `skill-security-review`, and `secure-mcp-builder` are the assess half of assess to enforce: they produce the risk-rated reviews that [security-workflows](https://github.com/garymike/security-workflows) turns into a build-failing gate and [security-agents](https://github.com/garymike/security-agents) compiles into a runtime firewall. The rest are general engineering skills, all of it personal and forkable.
+
 ## Quickstart
 
 Install with the skills.sh installer and pick what you want:
