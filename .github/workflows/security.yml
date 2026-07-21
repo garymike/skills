@@ -16,21 +16,22 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: garymike/security-workflows/.github/workflows/security-scan.yml@173cbfb4bbcc9e4c2a95a8bec9de0c4f42719eb0 # v0.4.3
+    uses: garymike/security-workflows/.github/workflows/security-scan.yml@8a5a69ab1ef4903bb6f281f8318770012fa6167c # v1.6.0
     secrets: inherit
 
   gha-security:
     permissions:
       contents: read
       packages: read
-    uses: garymike/security-workflows/.github/workflows/gha-security.yml@173cbfb4bbcc9e4c2a95a8bec9de0c4f42719eb0 # v0.4.3
+    uses: garymike/security-workflows/.github/workflows/gha-security.yml@8a5a69ab1ef4903bb6f281f8318770012fa6167c # v1.6.0
     secrets: inherit
 
   skill-audit:
     permissions:
       contents: read
       packages: read
-    uses: garymike/security-workflows/.github/workflows/skill-audit.yml@173cbfb4bbcc9e4c2a95a8bec9de0c4f42719eb0 # v0.4.3
+      security-events: write
+    uses: garymike/security-workflows/.github/workflows/skill-audit.yml@8a5a69ab1ef4903bb6f281f8318770012fa6167c # v1.6.0
     secrets: inherit
 
   sast:
@@ -38,12 +39,12 @@ jobs:
       contents: read
       packages: read
       security-events: write
-    uses: garymike/security-workflows/.github/workflows/sast.yml@173cbfb4bbcc9e4c2a95a8bec9de0c4f42719eb0 # v0.4.3
+    uses: garymike/security-workflows/.github/workflows/sast.yml@8a5a69ab1ef4903bb6f281f8318770012fa6167c # v1.6.0
     secrets: inherit
 
   audit:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
-    uses: garymike/security-workflows/.github/workflows/security-audit.yml@173cbfb4bbcc9e4c2a95a8bec9de0c4f42719eb0 # v0.4.3
+    uses: garymike/security-workflows/.github/workflows/security-audit.yml@8a5a69ab1ef4903bb6f281f8318770012fa6167c # v1.6.0
     secrets: inherit
