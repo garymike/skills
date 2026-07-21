@@ -4,7 +4,7 @@ My personal [Agent Skills](https://agentskills.io). Straight from my `.claude` d
 
 Small, composable skills that encode repeatable engineering and workflow discipline. They work with any model, are easy to adapt, and are meant to be forked and made your own.
 
-Several of these are the methodology tier of a small security platform. `mcp-security-review`, `skill-security-review`, and `secure-mcp-builder` are the assess half of assess to enforce: they produce the risk-rated reviews that [security-workflows](https://github.com/garymike/security-workflows) turns into a build-failing gate and [security-agents](https://github.com/garymike/security-agents) compiles into a runtime firewall. The rest are general engineering skills, all of it personal and forkable.
+Two of these are the assess half of a small security platform: `mcp-security-review` and `skill-security-review` produce the risk-rated reviews that [security-workflows](https://github.com/garymike/security-workflows) turns into a build-failing gate and [security-agents](https://github.com/garymike/security-agents) compiles into a runtime firewall. `secure-mcp-builder` is the build-side counterpart, for building an MCP server securely from the start rather than assessing one after the fact. The rest are general engineering skills, all of them personal and forkable.
 
 ## Quickstart
 
@@ -52,7 +52,7 @@ Skills split on one axis: who can invoke them. **User-invoked** skills run only 
 
 **Model-invoked**
 
-- **[skill-security-review](skills/skill-security-review/SKILL.md)**. Assess any agent skill across both execution surfaces: the agent-execution surface (`SKILL.md` + agent-invoked scripts: prompt injection, tool poisoning, memory poisoning) and the developer-execution surface (bundled test files, git hooks, and npm/pip lifecycle scripts that auto-run on `npm test` / `git commit` / `npm install`, outside the agent, with the developer's own permissions, the blind spot every skill scanner misses). Authors a schema-valid `assessment.json`, findings-first. The methodology behind the `skill-auditor` agent in [garymike/security-agents](https://github.com/garymike/security-agents); escalates from the `skill-testfile-gate` in [garymike/security-workflows](https://github.com/garymike/security-workflows).
+- **[skill-security-review](skills/skill-security-review/SKILL.md)**. Assess any agent skill across both execution surfaces: the agent-execution surface (`SKILL.md` + agent-invoked scripts: prompt injection, tool poisoning, memory poisoning) and the developer-execution surface (bundled test files, git hooks, and npm/pip lifecycle scripts that auto-run on `npm test` / `git commit` / `npm install`, outside the agent, with the developer's own permissions, a surface advisory scanners flag but do not gate on). Authors a schema-valid `assessment.json`, findings-first. The methodology behind the `skill-auditor` agent in [garymike/security-agents](https://github.com/garymike/security-agents); escalates from the `skill-testfile-gate` in [garymike/security-workflows](https://github.com/garymike/security-workflows).
 
 More skills land here as I build them.
 
