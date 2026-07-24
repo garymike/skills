@@ -17,6 +17,8 @@ Reproducible, challengeable scoring. Eight factors, 1-5 each (5 = worst), weight
 
 Composite = Σ(score × weight).
 
+`ema_status: verified_correct` does not raise the Auth strength score above the existing best tier (OAuth 2.1 + PKCE, audience-validated already scores 1): EMA is a centralized-policy enhancement on that same base, not a different mechanism. Record it instead as a positive differentiator in the report's posture paragraph, the same "positive signal, not required" treatment `inspection-checklist.md` Part E already gives published tool-definition manifests and signed releases.
+
 ## Rating map
 
 | Composite | Rating |
@@ -29,6 +31,7 @@ Composite = Σ(score × weight).
 ## Overrides (apply after arithmetic)
 
 - Any automatic disqualifier from `risk-tiering.md` (hardcoded secrets, token passthrough, poisoned descriptions, typosquat, fetch-and-execute installs) → CRITICAL, recommendation `do_not_connect`.
+- `ema_status: verified_broken` → CRITICAL, recommendation `do_not_connect`. A server that advertises Enterprise-Managed Authorization while accepting a forged, wrong-audience, or expired ID-JAG is a worse posture than not declaring the extension at all: it creates false assurance that centralized enterprise policy is enforced.
 - Known exploited CVE in the pinned version → CRITICAL until patched version reassessed.
 - Composition: completes the lethal trifecta for a real user population → minimum HIGH regardless of composite, with the condition set that would reduce it stated in recommendations.
 - Two or more High findings → minimum HIGH.

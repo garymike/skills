@@ -45,6 +45,7 @@ Work through the parts your tier requires. Every checked item gets a one-line no
 - [ ] Auth flow quality: OAuth 2.1/PKCE for user-delegated access; exact redirect URIs; no long-lived static keys where delegation is available.
 - [ ] Data flow mapped: what leaves the org per tool call, where it is stored, retention, and whether the vendor trains on it (get the answer in writing for Tier 3).
 - [ ] Revocation path confirmed: you can kill its access unilaterally (token revocation, key rotation, IP block) and know how before connecting.
+- [ ] **Enterprise-Managed Authorization (EMA)**: does the server declare `io.modelcontextprotocol/enterprise-managed-authorization` support (initialize response `capabilities.extensions`, or its authorization metadata)? If yes: check (source, Mode 1, if the Authorization Server's code is available) or test (live, Mode 2, present a forged/wrong-audience/expired ID-JAG and confirm rejection, then a valid one and confirm acceptance) whether it actually validates signature against the IdP's JWKS, `aud`, `iss`, and `exp`. A declared-but-unvalidated implementation is an automatic Critical (`risk-scoring.md`), worse than not declaring it: it creates false assurance that centralized enterprise policy is enforced. If neither source nor a live target is available, record `declared_unverified`, never `verified_correct`. An unrun check is an unknown, and unknowns raise risk, never lower it.
 
 ## Part E: Active testing (Tier 2+ where you can exercise the server in a sandbox)
 
