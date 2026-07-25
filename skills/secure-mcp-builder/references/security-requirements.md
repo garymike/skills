@@ -37,7 +37,7 @@ Normative control catalog for first-party MCP servers. MUST items block the revi
 
 - **ST-1 (MUST)** No security decision ever depends on a session ID. If sessions exist (pre-2026 transports), IDs are generated from a CSPRNG, bound server-side to the authenticated user (key format `user_id:session_id`), expiring, and revocable. [SPEC session hijacking]
 - **ST-2 (MUST)** Design stateless-first: any cross-call state is an explicit, opaque handle that is user-bound, expiring, and validated on use. Handles are capability tokens; treat them like credentials. [2026-07-28 direction]
-- **ST-3 (MUST)** TLS 1.2+ on all remote transports; HSTS on public endpoints. Where a gateway/proxy fronts the server, or in service-to-service deployments, prefer mutual TLS (mTLS) — both peers present signed certificates — so unauthenticated components cannot reach the server.
+- **ST-3 (MUST)** TLS 1.2+ on all remote transports; HSTS on public endpoints. Where a gateway/proxy fronts the server, or in service-to-service deployments, prefer mutual TLS (mTLS, both peers present signed certificates) so unauthenticated components cannot reach the server.
 - **ST-4 (SHOULD, high-assurance)** Message-level integrity beyond TLS: sign JSON-RPC payloads with an identity-bound asymmetric key, include a unique nonce and timestamp per message, reject duplicates and stale timestamps (replay defense), verify mutually, and fail closed on any verification failure. TLS does not protect against tampering after termination; adopt this where proxies or middleware sit between TLS termination and the server, or where regulatory assurance demands it. Beyond current spec requirements and needs client cooperation; document the decision either way in the threat model.
 
 ## 5. Secrets and configuration
@@ -80,6 +80,6 @@ Primary sources this catalog derives from; consult when a control needs deeper c
 - OWASP MCP Security Cheat Sheet: cheatsheetseries.owasp.org/cheatsheets/MCP_Security_Cheat_Sheet.html
 - OWASP MCP Top 10: owasp.org/www-project-mcp-top-10
 - OWASP Top 10 for Agentic Applications 2026: genai.owasp.org
-- Wiz, Model Context Protocol (MCP) security best practices (cheat sheet): wiz.io — supply-chain signing, least privilege, sandboxing (non-root/seccomp/egress/quotas), gateway controls (informs SUP-2/3, ST-3)
+- Wiz, Model Context Protocol (MCP) security best practices (cheat sheet): wiz.io, supply-chain signing, least privilege, sandboxing (non-root/seccomp/egress/quotas), gateway controls (informs SUP-2/3, ST-3)
 - OAuth 2.0 Security Best Current Practice: RFC 9700
 - Anthropic, Writing effective tools for agents: anthropic.com/engineering/writing-tools-for-agents

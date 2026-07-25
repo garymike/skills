@@ -5,7 +5,7 @@ Decision guide and implementation patterns. Read in Phase 1. Normative controls 
 ## Decision tree
 
 1. **Local stdio, single user, no network listener** → No OAuth. Credentials for downstream systems come from the user's environment/secret manager, scoped to that user. Harden per AUTH-9, SEC-*, and the local-compromise guidance below.
-2. **Remote HTTP, single organization, users have an IdP** → OAuth 2.1 resource server fronted by your IdP (any OAuth 2.1 / OIDC provider — e.g. Entra ID, Okta, Auth0, Keycloak). This is the default for remote servers. Do not build your own authorization server.
+2. **Remote HTTP, single organization, users have an IdP** → OAuth 2.1 resource server fronted by your IdP (any OAuth 2.1 / OIDC provider, e.g. Entra ID, Okta, Auth0, Keycloak). This is the default for remote servers. Do not build your own authorization server.
 3. **Remote HTTP, acting as a proxy to a third-party API with its own OAuth** → OAuth proxy pattern. Highest-risk shape; implement the confused deputy defenses (AUTH-6) exactly as specified.
 
 ## Pattern A: Resource server (default for remote)
