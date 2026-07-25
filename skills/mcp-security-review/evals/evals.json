@@ -120,7 +120,7 @@
           "type": "content"
         },
         {
-          "text": "A secondary finding flags the tickets.admin scope as excessive for a toolset where only one tool needs write access, citing AUTH-8",
+          "text": "A secondary finding flags the tickets.admin scope as excessive for a toolset where only two of five tools need write access, citing AUTH-8",
           "type": "content"
         },
         {

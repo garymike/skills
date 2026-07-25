@@ -8,7 +8,7 @@ helpdesk-mcp is a first-party remote server fronting the corporate ticketing sys
 
 **Top findings**
 - **CRITICAL** Enterprise-Managed Authorization declared but ID-JAG audience is never validated (Finding-01)
-- **MODERATE** Excess OAuth scope requested for a single-purpose tool (Finding-02)
+- **MODERATE** Excess OAuth scope requested across a mixed read/write toolset (Finding-02)
 
 **Scope:** Assess helpdesk-mcp before expanding it from the platform-team pilot to company-wide use.
 
@@ -38,12 +38,12 @@ _Full review · modes code · 2026-07-21 · checks not performed: 2_
 - **Remediation:** Pass audience="helpdesk-mcp" (this server's canonical resource identifier) to jwt.decode, and reject any ID-JAG whose aud does not match. Add a test that presents a validly-signed, wrong-audience token and asserts rejection before re-enabling the EMA declaration. (AUTH-11, AUTH-1)
 - **Status:** open
 
-### Finding-02 — Excess OAuth scope requested for a single-purpose tool  ·  MODERATE  ·  _reasoned_
+### Finding-02 — Excess OAuth scope requested across a mixed read/write toolset  ·  MODERATE  ·  _reasoned_
 - **Category:** Excessive Agency · Part D · AUTH-8
-- **Affected:** tool: helpdesk_close_ticket
-- **Description:** The server requests the tickets.admin scope for the entire tool surface, but only helpdesk_close_ticket needs write access; the other four tools are read-only.
+- **Affected:** tools: helpdesk_create_ticket, helpdesk_close_ticket
+- **Description:** The server requests the tickets.admin scope for the entire tool surface, but only helpdesk_create_ticket and helpdesk_close_ticket need write access; the other three tools are read-only.
 - **Impact:** Any compromise of the server's token, or a confused-deputy call routed through it, carries admin-level ticketing scope rather than the narrow write scope the toolset actually needs.
-- **Remediation:** Split into tickets.read (the four read tools) and tickets.write (helpdesk_close_ticket only); drop tickets.admin entirely. (AUTH-8)
+- **Remediation:** Split into tickets.read (the three read tools) and tickets.write (helpdesk_create_ticket, helpdesk_close_ticket); drop tickets.admin entirely. (AUTH-8)
 - **Status:** open
 
 ## Technical assessment

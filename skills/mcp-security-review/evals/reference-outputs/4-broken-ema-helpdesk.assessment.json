@@ -52,20 +52,20 @@
     },
     {
       "id": "F-02",
-      "title": "Excess OAuth scope requested for a single-purpose tool",
+      "title": "Excess OAuth scope requested across a mixed read/write toolset",
       "severity": "moderate",
       "category": {
         "owasp_mcp_top10": "Excessive Agency",
         "review_part": "D",
         "control_ids": ["AUTH-8"]
       },
-      "affected_component": "tool: helpdesk_close_ticket",
+      "affected_component": "tools: helpdesk_create_ticket, helpdesk_close_ticket",
       "verification": "reasoned",
       "status": "open",
-      "description": "The server requests the tickets.admin scope for the entire tool surface, but only helpdesk_close_ticket needs write access; the other four tools are read-only.",
+      "description": "The server requests the tickets.admin scope for the entire tool surface, but only helpdesk_create_ticket and helpdesk_close_ticket need write access; the other three tools are read-only.",
       "impact": "Any compromise of the server's token, or a confused-deputy call routed through it, carries admin-level ticketing scope rather than the narrow write scope the toolset actually needs.",
       "remediation": {
-        "summary": "Split into tickets.read (the four read tools) and tickets.write (helpdesk_close_ticket only); drop tickets.admin entirely.",
+        "summary": "Split into tickets.read (the three read tools) and tickets.write (helpdesk_create_ticket, helpdesk_close_ticket); drop tickets.admin entirely.",
         "control_ids": ["AUTH-8"]
       }
     }
@@ -84,7 +84,7 @@
       { "name": "helpdesk_create_ticket", "function": "Open a new ticket in a queue.", "class": "write" },
       { "name": "helpdesk_close_ticket", "function": "Close a ticket with a resolution note.", "class": "write" }
     ],
-    "permissions": ["tickets.admin (requested for the full toolset; only helpdesk_close_ticket needs write, see F-02)"],
+    "permissions": ["tickets.admin (requested for the full toolset; helpdesk_create_ticket and helpdesk_close_ticket need write, see F-02)"],
     "hosting": {
       "hosting_model": "remote_self",
       "install_methods": ["Internal service catalog entry; clients connect to https://mcp.helpdesk.acme.internal"],
