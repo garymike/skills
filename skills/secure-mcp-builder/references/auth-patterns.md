@@ -18,6 +18,10 @@ The MCP server is an OAuth 2.1 protected resource. It never sees passwords and d
 - Map token claims to an internal principal; enforce per-tool scope checks (`scope` claim) and per-resource entitlement checks (AUTH-5).
 - Accept tokens only via `Authorization: Bearer`; never via query strings; never log them.
 
+### Enterprise-Managed Authorization (optional addendum to Pattern A)
+
+If your deployment targets organizations with centralized IdP policy, declare `io.modelcontextprotocol/enterprise-managed-authorization` support and accept ID-JAGs as an additional grant type at your existing token endpoint. Validate an ID-JAG with the exact same checks Pattern A already requires for ordinary bearer tokens (signature against JWKS, `iss`, `exp`, `aud`); there is no separate, weaker validation path for this grant type. See AUTH-11.
+
 ## Pattern B: Downstream access with user context
 
 The server needs to call downstream APIs as the user. Two acceptable shapes:
