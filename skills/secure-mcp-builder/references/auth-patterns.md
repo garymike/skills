@@ -29,7 +29,7 @@ If your deployment targets organizations with centralized IdP policy, declare `i
 | `resource` | This server's canonical resource identifier, the same RFC 9728 one Pattern A publishes | This is the claim that says the token is for you. Skip it and an ID-JAG minted for a sibling MCP server behind the same AS is accepted here |
 | `exp` / `nbf` | Current time inside the validity window | Same expiry discipline as any bearer token |
 
-The access token the exchange yields is then audience-restricted to the MCP server named in `resource`, so Pattern A's per-request `aud` check on the access token itself still applies unchanged. Reject a valid-but-wrong-`resource` ID-JAG exactly as you reject a wrong-audience bearer token. Track each accepted ID-JAG's `jti` for its validity window and reject duplicates. See AUTH-11.
+The access token the exchange yields is then audience-restricted to the MCP server named in `resource`, so Pattern A's per-request `aud` check on the access token itself still applies unchanged. Reject a valid-but-wrong-`resource` ID-JAG exactly as you reject a wrong-audience bearer token. See AUTH-11.
 
 ## Pattern B: Downstream access with user context
 

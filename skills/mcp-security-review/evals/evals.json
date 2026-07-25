@@ -112,7 +112,7 @@
           "type": "content"
         },
         {
-          "text": "The missing-audience-check finding is Critical severity and cites AUTH-11 and AUTH-1 in category.control_ids and remediation.control_ids",
+          "text": "The finding covering the missing aud and resource checks is Critical severity and cites AUTH-11 and AUTH-1 in category.control_ids and remediation.control_ids",
           "type": "content"
         },
         {
