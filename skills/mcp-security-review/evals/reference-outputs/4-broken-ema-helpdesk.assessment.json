@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "meta": {
+    "server_name": "helpdesk-mcp",
+    "version_or_endpoint": "v2.3.0 / https://mcp.helpdesk.acme.internal",
+    "publisher": "first-party (Platform Engineering)",
+    "assessed_date": "2026-07-21",
+    "assessor": "mcp-security-review",
+    "tier": 3,
+    "review_modes": ["code"],
+    "source_commit_sha": "8f2c4a1e9b6d3f0a7c5e2b1d8f4a9c6e3b0d7f2a",
+    "definition_hash_sha256": "b7e1a4c9d2f6083a5e7c1b9d4f2a8e6c0b3d7f1a9e5c2b8d4f0a6e3c9b1d7f5a",
+    "scope_statement": "Assess helpdesk-mcp before expanding it from the platform-team pilot to company-wide use.",
+    "checks_not_performed": ["part-e-runtime", "sandbox"]
+  },
+  "verdict": "do_not_connect",
+  "overall_risk": {
+    "rating": "critical",
+    "composite": 2.80
+  },
+  "executive_summary": {
+    "posture": "helpdesk-mcp is a first-party remote server fronting the corporate ticketing system, expanding from a pilot to company-wide rollout. It declares Enterprise-Managed Authorization to satisfy the planned centralized-access requirement, but its Authorization Server accepts any validly-signed ID-JAG regardless of audience, so a token minted for any other application in the same IdP tenant is accepted here too. That is worse than not declaring EMA at all: it creates the appearance of centralized enterprise control while remaining bypassable.",
+    "top_finding_ids": ["F-01", "F-02"]
+  },
+  "findings": [
+    {
+      "id": "F-01",
+      "title": "Enterprise-Managed Authorization declared but ID-JAG audience is never validated",
+      "severity": "critical",
+      "category": {
+        "owasp_mcp_top10": "Token Exposure / Broken Authorization",
+        "review_part": "D",
+        "control_ids": ["AUTH-11", "AUTH-1"]
+      },
+      "affected_component": "Authorization Server: validate_id_jag()",
+      "verification": "reasoned",
+      "status": "open",
+      "description": "The server declares io.modelcontextprotocol/enterprise-managed-authorization in its initialize response, so a connecting client's administrator will treat it as governed by centralized IdP policy. Its token-validation function verifies the ID-JAG's signature against the IdP's JWKS and checks expiration, but never checks the aud claim against this server's own resource identifier.",
+      "impact": "Any validly-signed ID-JAG issued by the same IdP tenant for a different application is accepted here. An attacker, or a compromised, unrelated internal app, that can obtain any ID-JAG from this IdP gains a valid access token to the ticketing system, entirely bypassing the per-server policy the IdP admin believes they configured. This is a confused-deputy, audience-confusion bypass of the exact control EMA exists to provide.",
+      "likelihood": "Moderate to high: any other EMA-aware application in the same enterprise IdP tenant is a viable source of a wrong-audience ID-JAG; no privileged access is required to obtain one, only a connection to any other org-approved MCP server or app under the same IdP.",
+      "evidence": {
+        "location": "auth/validate.py:41",
+        "detail": "def validate_id_jag(token: str) -> dict:\n    header = jwt.get_unverified_header(token)\n    key = jwks_client.get_signing_key(header[\"kid\"])\n    claims = jwt.decode(token, key.key, algorithms=[\"RS256\"])\n    # no audience=... kwarg: PyJWT does not check aud unless told to\n    return claims",
+        "secret_masked": true
+      },
+      "remediation": {
+        "summary": "Pass audience=\"helpdesk-mcp\" (this server's canonical resource identifier) to jwt.decode, and reject any ID-JAG whose aud does not match. Add a test that presents a validly-signed, wrong-audience token and asserts rejection before re-enabling the EMA declaration.",
+        "control_ids": ["AUTH-11", "AUTH-1"],
+        "references": ["https://modelcontextprotocol.io/extensions/auth/enterprise-managed-authorization"]
+      },
+      "references": ["https://modelcontextprotocol.io/extensions/auth/enterprise-managed-authorization"]
+    },
+    {
+      "id": "F-02",
+      "title": "Excess OAuth scope requested for a single-purpose tool",
+      "severity": "moderate",
+      "category": {
+        "owasp_mcp_top10": "Excessive Agency",
+        "review_part": "D",
+        "control_ids": ["AUTH-8"]
+      },
+      "affected_component": "tool: helpdesk_close_ticket",
+      "verification": "reasoned",
+      "status": "open",
+      "description": "The server requests the tickets.admin scope for the entire tool surface, but only helpdesk_close_ticket needs write access; the other four tools are read-only.",
+      "impact": "Any compromise of the server's token, or a confused-deputy call routed through it, carries admin-level ticketing scope rather than the narrow write scope the toolset actually needs.",
+      "remediation": {
+        "summary": "Split into tickets.read (the four read tools) and tickets.write (helpdesk_close_ticket only); drop tickets.admin entirely.",
+        "control_ids": ["AUTH-8"]
+      }
+    }
+  ],
+  "technical_assessment": {
+    "profile": {
+      "purpose": "Expose the corporate ticketing system (create, search, and close helpdesk tickets) to agents company-wide.",
+      "creator_publisher": "first-party (Platform Engineering)",
+      "maintenance_signals": "Active internal repo, weekly releases, 3 maintainers.",
+      "license": "internal"
+    },
+    "capabilities": [
+      { "name": "helpdesk_search_tickets", "function": "Search tickets by status, requester, or text.", "class": "read" },
+      { "name": "helpdesk_get_ticket", "function": "Fetch a single ticket by id.", "class": "read" },
+      { "name": "helpdesk_list_queues", "function": "List ticket queues the caller can see.", "class": "read" },
+      { "name": "helpdesk_create_ticket", "function": "Open a new ticket in a queue.", "class": "write" },
+      { "name": "helpdesk_close_ticket", "function": "Close a ticket with a resolution note.", "class": "write" }
+    ],
+    "permissions": ["tickets.admin (requested for the full toolset; only helpdesk_close_ticket needs write, see F-02)"],
+    "hosting": {
+      "hosting_model": "remote_self",
+      "install_methods": ["Internal service catalog entry; clients connect to https://mcp.helpdesk.acme.internal"],
+      "install_time_behavior": "No install; remote HTTP endpoint.",
+      "data_residency": "Company-owned infrastructure, same region as the ticketing system."
+    },
+    "protocols": {
+      "mcp_spec_version": "2025-11-25",
+      "transport": ["streamable-http"],
+      "forward_compat_notes": "No session-derived security decisions observed; compatible with the stateless 2026-07-28 direction."
+    },
+    "authentication_and_credential_risk": {
+      "auth_client_to_server": "oauth21_pkce",
+      "auth_downstream": "Service identity with enforced per-user context (AUTH-5) against the ticketing API.",
+      "token_passthrough": false,
+      "ema_status": "verified_broken",
+      "stored_credential_risk": "low",
+      "notes": "OAuth 2.1/PKCE and per-user downstream context are sound. The critical gap is entirely in ID-JAG audience validation (F-01)."
+    },
+    "composition": {
+      "trifecta_complete": false,
+      "analysis": "Ticket content is internal, and the server has no external-communication tool; the trifecta's third leg (an exfiltration channel) is not present as reviewed.",
+      "blast_radius": "Full read/write/admin ticketing access for any caller presenting a wrong-audience ID-JAG from the same IdP tenant, company-wide once past pilot."
+    }
+  },
+  "risk_rating": {
+    "factor_scores": {
+      "provenance": 1,
+      "capability": 3,
+      "permissions": 4,
+      "hosting_exposure": 2,
+      "auth_strength": 5,
+      "credential_storage": 2,
+      "install_vector": 1,
+      "code_hygiene": 2
+    },
+    "composite": 2.80,
+    "overrides_applied": ["ema_status: verified_broken -> CRITICAL, recommendation do_not_connect"]
+  },
+  "recommendations": [
+    {
+      "priority": 1,
+      "action": "Fix ID-JAG audience validation before any expansion beyond the pilot: pass this server's resource identifier as the required audience and reject mismatches, then re-verify with a forged wrong-audience token.",
+      "finding_ids": ["F-01"],
+      "control_ids": ["AUTH-11", "AUTH-1"]
+    },
+    {
+      "priority": 2,
+      "action": "Split the requested OAuth scope into tickets.read and tickets.write; drop tickets.admin.",
+      "finding_ids": ["F-02"],
+      "control_ids": ["AUTH-8"]
+    }
+  ],
+  "limitations": {
+    "disclaimer": "Point-in-time assessment (2026-07-21) against the reviewed commit. Static/code review only; the Authorization Server was not exercised live with a forged token in this pass. This report is not a warranty.",
+    "verification_note": "F-01 is reasoned (static/definition review): the missing audience check is visible in source, not confirmed by presenting a live forged token. Run the skill-security-review validator, or a live authorization-attack pass, to upgrade to confirmed."
+  }
+}

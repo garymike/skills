@@ -95,6 +95,39 @@
           "type": "content"
         }
       ]
+    },
+    {
+      "id": 4,
+      "eval_name": "broken-ema-audience-check",
+      "prompt": "Assess helpdesk-mcp before we expand it from the platform team pilot to company-wide. It's our first-party remote server fronting the ticketing system (search/get/list/create/close tickets), OAuth 2.1 + PKCE, and we just added Enterprise-Managed Authorization support so the security team can control access centrally through our IdP. Source is available. One thing to check closely: does our ID-JAG validation actually check the audience claim? Here's the validation function: `def validate_id_jag(token): header = jwt.get_unverified_header(token); key = jwks_client.get_signing_key(header['kid']); claims = jwt.decode(token, key.key, algorithms=['RS256']); return claims`. Also flag anything else you see (we request the tickets.admin scope for the whole toolset).",
+      "expected_output": "Report identifies that jwt.decode is called without an audience parameter, so PyJWT never validates the aud claim; any validly-signed ID-JAG from the same IdP tenant, even one minted for a different application, would be accepted. This is scored ema_status: verified_broken and is an automatic Critical override (do_not_connect) regardless of the otherwise-sound OAuth 2.1/PKCE client auth. A secondary Moderate finding covers the excess tickets.admin scope. Report also notes the composite would otherwise round to MODERATE by raw arithmetic, showing the override doing real work.",
+      "files": [],
+      "assertions": [
+        {
+          "text": "Identifies the missing audience (aud) check in the ID-JAG validation function as the root cause, citing that PyJWT does not validate aud unless the audience parameter is passed to jwt.decode",
+          "type": "content"
+        },
+        {
+          "text": "technical_assessment.authentication_and_credential_risk.ema_status is verified_broken, not declared_unverified or verified_correct: this was confirmed by source review (Mode 1: code), not merely an unverified declaration",
+          "type": "content"
+        },
+        {
+          "text": "The missing-audience-check finding is Critical severity and cites AUTH-11 and AUTH-1 in category.control_ids and remediation.control_ids",
+          "type": "content"
+        },
+        {
+          "text": "overall_risk.rating is CRITICAL via the ema_status override (risk_rating.overrides_applied names it), and verdict is do_not_connect, even though the raw weighted composite (shown in risk_rating.composite) falls in the MODERATE band by the rating-map table alone",
+          "type": "content"
+        },
+        {
+          "text": "A secondary finding flags the tickets.admin scope as excessive for a toolset where only one tool needs write access, citing AUTH-8",
+          "type": "content"
+        },
+        {
+          "text": "assessment.json validates against schema/assessment.schema.json and renders via scripts/render_report.py to the standard report shape",
+          "type": "content"
+        }
+      ]
     }
   ]
 }
