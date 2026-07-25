@@ -29,6 +29,7 @@ wording. The `.html` / `.rendered.md` show the shape the renderer guarantees.
 | 1 `assess-oss-package-full-report` | arxiv-mcp-server, researchers with a document store + email | `1-assess-oss-package-arxiv.assessment.json` (+ `.html`, `.rendered.md`) |
 | 2 `critical-findings-lead-report` | first-party CRM server, hardcoded key + god-tool | `2-critical-findings-crm.assessment.json` (+ `.html`, `.rendered.md`) |
 | 3 `rug-pull-reassessment` | approved ticketing connector, definition hash changed | `3-rug-pull-reassessment.md` |
+| 4 `broken-ema-audience-check` | helpdesk-mcp, declares EMA but checks neither the ID-JAG's `aud` nor its `resource` claim | `4-broken-ema-helpdesk.assessment.json` (+ `.html`, `.rendered.md`) |
 
 **Why #3 is prose, not an `assessment.json`.** Eval #3 asks for the re-assessment
 *process* and the *delta* to an existing report, and the prompt supplies almost no

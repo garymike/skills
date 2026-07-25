@@ -153,6 +153,10 @@
             "auth_client_to_server": { "enum": ["oauth21_pkce", "bearer", "api_key", "none"] },
             "auth_downstream": { "type": "string" },
             "token_passthrough": { "type": "boolean" },
+            "ema_status": {
+              "enum": ["not_declared", "declared_unverified", "verified_correct", "verified_broken"],
+              "description": "Enterprise-Managed Authorization (io.modelcontextprotocol/enterprise-managed-authorization). not_declared: the server does not advertise the extension. declared_unverified: it does, but review mode could not establish whether ID-JAG validation is correct (static-only with no AS source, or no live target). verified_correct: source-confirmed or live-tested to validate signature, iss, exp, aud against the Resource Authorization Server's own issuer identifier, and the separate resource claim against the MCP server's own canonical resource identifier. verified_broken: declares support but a forged, wrong-resource, wrong-audience, or expired ID-JAG would be accepted, or validation is absent/incomplete in source."
+            },
             "stored_credential_risk": { "enum": ["low", "moderate", "high", "critical"] },
             "notes": { "type": "string" }
           }

@@ -95,6 +95,39 @@
           "type": "content"
         }
       ]
+    },
+    {
+      "id": 4,
+      "eval_name": "broken-ema-audience-check",
+      "prompt": "Assess helpdesk-mcp before we expand it from the platform team pilot to company-wide. It's our first-party remote server fronting the ticketing system (search/get/list/create/close tickets), OAuth 2.1 + PKCE, and we just added Enterprise-Managed Authorization support so the security team can control access centrally through our IdP. Source is available. One thing to check closely: does our ID-JAG validation actually check the audience claim? Here's the validation function: `def validate_id_jag(token): header = jwt.get_unverified_header(token); key = jwks_client.get_signing_key(header['kid']); claims = jwt.decode(token, key.key, algorithms=['RS256']); return claims`. Also flag anything else you see (we request the tickets.admin scope for the whole toolset).",
+      "expected_output": "Report identifies both validation gaps: jwt.decode is called without an audience parameter, so PyJWT never checks aud against the Authorization Server's own issuer identifier, and the function never reads the resource claim, so nothing checks the token was minted for this MCP server. Either gap alone means any validly-signed ID-JAG from the same IdP tenant, including one minted for a sibling MCP server behind the same Authorization Server, would be accepted. This is scored ema_status: verified_broken and is an automatic Critical override (do_not_connect) regardless of the otherwise-sound OAuth 2.1/PKCE client auth. A secondary Moderate finding covers the excess tickets.admin scope. Report also shows the raw weighted composite landing in the MODERATE band, so the named ema_status override is a visible, checkable reason for the CRITICAL rating; the Critical finding on its own would force CRITICAL under the same rules, so the override is the explicit path here rather than the only one.",
+      "files": [],
+      "assertions": [
+        {
+          "text": "Identifies both missing checks in the ID-JAG validation function as the root cause: the missing aud check against the Authorization Server's own issuer identifier (citing that PyJWT does not validate aud unless the audience parameter is passed to jwt.decode), and the fact that the separate resource claim, which is what names this MCP server, is never inspected at all",
+          "type": "content"
+        },
+        {
+          "text": "technical_assessment.authentication_and_credential_risk.ema_status is verified_broken, not declared_unverified or verified_correct: this was confirmed by source review (Mode 1: code), not merely an unverified declaration",
+          "type": "content"
+        },
+        {
+          "text": "The finding covering the missing aud and resource checks is Critical severity and cites AUTH-11 and AUTH-1 in category.control_ids and remediation.control_ids",
+          "type": "content"
+        },
+        {
+          "text": "overall_risk.rating is CRITICAL via the ema_status override (risk_rating.overrides_applied names it), and verdict is do_not_connect, even though the raw weighted composite (shown in risk_rating.composite) falls in the MODERATE band by the rating-map table alone",
+          "type": "content"
+        },
+        {
+          "text": "A secondary finding flags the tickets.admin scope as excessive for a toolset where only two of five tools need write access, citing AUTH-8",
+          "type": "content"
+        },
+        {
+          "text": "assessment.json validates against schema/assessment.schema.json and renders via scripts/render_report.py to the standard report shape",
+          "type": "content"
+        }
+      ]
     }
   ]
 }

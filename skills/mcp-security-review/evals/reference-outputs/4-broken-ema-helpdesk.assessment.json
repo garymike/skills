@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "meta": {
+    "server_name": "helpdesk-mcp",
+    "version_or_endpoint": "v2.3.0 / https://mcp.helpdesk.acme.internal",
+    "publisher": "first-party (Platform Engineering)",
+    "assessed_date": "2026-07-21",
+    "assessor": "mcp-security-review",
+    "tier": 3,
+    "review_modes": ["code"],
+    "source_commit_sha": "8f2c4a1e9b6d3f0a7c5e2b1d8f4a9c6e3b0d7f2a",
+    "definition_hash_sha256": "b7e1a4c9d2f6083a5e7c1b9d4f2a8e6c0b3d7f1a9e5c2b8d4f0a6e3c9b1d7f5a",
+    "scope_statement": "Assess helpdesk-mcp before expanding it from the platform-team pilot to company-wide use.",
+    "checks_not_performed": ["part-e-runtime", "sandbox"]
+  },
+  "verdict": "do_not_connect",
+  "overall_risk": {
+    "rating": "critical",
+    "composite": 2.80
+  },
+  "executive_summary": {
+    "posture": "helpdesk-mcp is a first-party remote server fronting the corporate ticketing system, expanding from a pilot to company-wide rollout. It declares Enterprise-Managed Authorization to satisfy the planned centralized-access requirement, but its Authorization Server accepts any validly-signed ID-JAG without checking either the aud claim or the resource claim, so a token minted for a sibling MCP server behind the same Authorization Server is accepted here too. That is worse than not declaring EMA at all: it creates the appearance of centralized enterprise control while remaining bypassable.",
+    "top_finding_ids": ["F-01", "F-02"]
+  },
+  "findings": [
+    {
+      "id": "F-01",
+      "title": "Enterprise-Managed Authorization declared but the ID-JAG's aud and resource claims are never validated",
+      "severity": "critical",
+      "category": {
+        "owasp_mcp_top10": "Token Exposure / Broken Authorization",
+        "review_part": "D",
+        "control_ids": ["AUTH-11", "AUTH-1"]
+      },
+      "affected_component": "Authorization Server: validate_id_jag()",
+      "verification": "reasoned",
+      "status": "open",
+      "description": "The server declares io.modelcontextprotocol/enterprise-managed-authorization in its initialize response, so a connecting client's administrator will treat it as governed by centralized IdP policy. Its token-validation function verifies the ID-JAG's signature against the IdP's JWKS and checks expiration, but leaves two required checks undone. First, jwt.decode is called with neither an audience= nor an issuer= kwarg, so the aud claim is never checked against the Resource Authorization Server's own issuer identifier. Second, the function never inspects the resource claim at all, so nothing establishes that this ID-JAG was minted for this MCP server. Both checks are required and PyJWT enforces neither unless told to: aud names the Authorization Server the token is presented to, while the separate resource claim names the MCP server it is for. Note that pinning the key through the JWKS endpoint (jwks_client.get_signing_key) does implicitly narrow the accepted key material to one issuer, so the absent issuer= check is a real but secondary gap next to the primary aud-versus-resource confusion.",
+      "impact": "Any validly-signed ID-JAG issued by the same IdP tenant is accepted here, including one minted for a sibling MCP server behind the same Authorization Server. The unchecked resource claim is what makes that sibling-server replay work, and the unchecked aud leaves the token unpinned to the Authorization Server it was actually addressed to. An attacker, or a compromised, unrelated internal app, that can obtain any ID-JAG from this IdP gains a valid access token to the ticketing system, entirely bypassing the per-server policy the IdP admin believes they configured. This is a confused-deputy bypass of the exact control EMA exists to provide.",
+      "likelihood": "Moderate to high: any other EMA-aware application in the same enterprise IdP tenant is a viable source of an ID-JAG carrying someone else's resource claim; no privileged access is required to obtain one, only a connection to any other org-approved MCP server or app under the same IdP. Note that a sibling MCP server behind this same Authorization Server yields a token whose aud is already correct, so the unchecked resource claim is the only thing standing between that token and this server.",
+      "evidence": {
+        "location": "auth/validate.py:41",
+        "detail": "def validate_id_jag(token: str) -> dict:\n    header = jwt.get_unverified_header(token)\n    key = jwks_client.get_signing_key(header[\"kid\"])\n    claims = jwt.decode(token, key.key, algorithms=[\"RS256\"])\n    # no audience= and no issuer= kwarg: PyJWT checks neither unless told to\n    # and claims[\"resource\"] is never read: nothing ties this token to this server\n    return claims",
+        "secret_masked": true
+      },
+      "remediation": {
+        "summary": "Validate both claims. Pass the Resource Authorization Server's own issuer identifier as audience= and the IdP's issuer as issuer= to jwt.decode, then separately assert that claims[\"resource\"] equals this server's canonical resource identifier (https://mcp.helpdesk.acme.internal) and reject any mismatch. Add tests that present a validly-signed ID-JAG with the wrong resource, and another with the wrong aud, and assert rejection of both before re-enabling the EMA declaration.",
+        "control_ids": ["AUTH-11", "AUTH-1"],
+        "references": ["https://modelcontextprotocol.io/extensions/auth/enterprise-managed-authorization"]
+      },
+      "references": ["https://modelcontextprotocol.io/extensions/auth/enterprise-managed-authorization"]
+    },
+    {
+      "id": "F-02",
+      "title": "Excess OAuth scope requested across a mixed read/write toolset",
+      "severity": "moderate",
+      "category": {
+        "owasp_mcp_top10": "Excessive Agency",
+        "review_part": "D",
+        "control_ids": ["AUTH-8"]
+      },
+      "affected_component": "tools: helpdesk_create_ticket, helpdesk_close_ticket",
+      "verification": "reasoned",
+      "status": "open",
+      "description": "The server requests the tickets.admin scope for the entire tool surface, but only helpdesk_create_ticket and helpdesk_close_ticket need write access; the other three tools are read-only.",
+      "impact": "Any compromise of the server's token, or a confused-deputy call routed through it, carries admin-level ticketing scope rather than the narrow write scope the toolset actually needs.",
+      "remediation": {
+        "summary": "Split into tickets.read (the three read tools) and tickets.write (helpdesk_create_ticket, helpdesk_close_ticket); drop tickets.admin entirely.",
+        "control_ids": ["AUTH-8"]
+      }
+    }
+  ],
+  "technical_assessment": {
+    "profile": {
+      "purpose": "Expose the corporate ticketing system (create, search, and close helpdesk tickets) to agents company-wide.",
+      "creator_publisher": "first-party (Platform Engineering)",
+      "maintenance_signals": "Active internal repo, weekly releases, 3 maintainers.",
+      "license": "internal"
+    },
+    "capabilities": [
+      { "name": "helpdesk_search_tickets", "function": "Search tickets by status, requester, or text.", "class": "read" },
+      { "name": "helpdesk_get_ticket", "function": "Fetch a single ticket by id.", "class": "read" },
+      { "name": "helpdesk_list_queues", "function": "List ticket queues the caller can see.", "class": "read" },
+      { "name": "helpdesk_create_ticket", "function": "Open a new ticket in a queue.", "class": "write" },
+      { "name": "helpdesk_close_ticket", "function": "Close a ticket with a resolution note.", "class": "write" }
+    ],
+    "permissions": ["tickets.admin (requested for the full toolset; helpdesk_create_ticket and helpdesk_close_ticket need write, see F-02)"],
+    "hosting": {
+      "hosting_model": "remote_self",
+      "install_methods": ["Internal service catalog entry; clients connect to https://mcp.helpdesk.acme.internal"],
+      "install_time_behavior": "No install; remote HTTP endpoint.",
+      "data_residency": "Company-owned infrastructure, same region as the ticketing system."
+    },
+    "protocols": {
+      "mcp_spec_version": "2025-11-25",
+      "transport": ["streamable-http"],
+      "forward_compat_notes": "No session-derived security decisions observed; compatible with the stateless 2026-07-28 direction."
+    },
+    "authentication_and_credential_risk": {
+      "auth_client_to_server": "oauth21_pkce",
+      "auth_downstream": "Service identity with enforced per-user context (AUTH-5) against the ticketing API.",
+      "token_passthrough": false,
+      "ema_status": "verified_broken",
+      "stored_credential_risk": "low",
+      "notes": "OAuth 2.1/PKCE and per-user downstream context are sound. The critical gap is entirely in ID-JAG claim validation, both aud and resource (F-01)."
+    },
+    "composition": {
+      "trifecta_complete": false,
+      "analysis": "Ticket content is internal, and the server has no external-communication tool; the trifecta's third leg (an exfiltration channel) is not present as reviewed.",
+      "blast_radius": "Full read/write/admin ticketing access for any caller presenting an ID-JAG from the same IdP tenant that was never minted for this server, company-wide once past pilot."
+    }
+  },
+  "risk_rating": {
+    "factor_scores": {
+      "provenance": 1,
+      "capability": 3,
+      "permissions": 4,
+      "hosting_exposure": 2,
+      "auth_strength": 5,
+      "credential_storage": 2,
+      "install_vector": 1,
+      "code_hygiene": 2
+    },
+    "composite": 2.80,
+    "overrides_applied": ["ema_status: verified_broken -> CRITICAL, recommendation do_not_connect"]
+  },
+  "recommendations": [
+    {
+      "priority": 1,
+      "action": "Fix ID-JAG claim validation before any expansion beyond the pilot: check aud against the Authorization Server's own issuer identifier and check the resource claim against this server's canonical resource identifier, rejecting either mismatch, then re-verify with a wrong-resource token and a wrong-audience token.",
+      "finding_ids": ["F-01"],
+      "control_ids": ["AUTH-11", "AUTH-1"]
+    },
+    {
+      "priority": 2,
+      "action": "Split the requested OAuth scope into tickets.read and tickets.write; drop tickets.admin.",
+      "finding_ids": ["F-02"],
+      "control_ids": ["AUTH-8"]
+    }
+  ],
+  "limitations": {
+    "disclaimer": "Point-in-time assessment (2026-07-21) against the reviewed commit. Static/code review only; the Authorization Server was not exercised live with a forged token in this pass. This report is not a warranty.",
+    "verification_note": "F-01 is reasoned (static/definition review): the missing aud and resource checks are visible in source, not confirmed by presenting a live forged token. Run the skill-security-review validator, or a live authorization-attack pass, to upgrade to confirmed."
+  }
+}

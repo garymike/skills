@@ -33,7 +33,7 @@ Work `references/inspection-checklist.md` at the assigned depth, using the mode(
 - **Part A** Provenance and package integrity (typosquats, repo↔package match, dependency scan, CVE/incident history, vendor posture).
 - **Part B** Tool surface as injection surface: automated scan (mcp-scan or equivalent) plus a human read of every description and schema; hash the definition set.
 - **Part C** Code and runtime (local/self-hosted, or first-party with source access): startup behavior, filesystem/network reach, credential handling, subprocess and dynamic-code use, sandbox observation. **Hardcoded secrets, credentials in config, or tokens in logs are automatic Critical findings.**
-- **Part D** Auth and data flow: auth mechanism quality (OAuth 2.1/PKCE vs static keys vs nothing), token handling (passthrough is an automatic Critical), stored credential risk (where secrets live at rest, encrypted how, revocable how), data egress and retention.
+- **Part D** Auth and data flow: auth mechanism quality (OAuth 2.1/PKCE vs static keys vs nothing), token handling (passthrough is an automatic Critical), Enterprise-Managed Authorization validation (a declared-but-broken ID-JAG check, `ema_status: verified_broken`, is the other automatic Critical), stored credential risk (where secrets live at rest, encrypted how, revocable how), data egress and retention.
 
 ### 3. Assess composition (when connection context is known)
 

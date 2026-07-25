@@ -6,6 +6,48 @@ All notable changes to this repo are documented here. Versions match the
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-07-21
+
+### Added
+- **mcp-security-review: Enterprise-Managed Authorization (EMA) awareness.** New
+  `ema_status` field on `technical_assessment.authentication_and_credential_risk`
+  (not_declared / declared_unverified / verified_correct / verified_broken),
+  additive so every existing recorded assessment stays schema-valid unmodified.
+  New Part D checklist item: check whether a server declares
+  `io.modelcontextprotocol/enterprise-managed-authorization`, and if so, verify
+  (source or live) that it actually validates the ID-JAG's signature, issuer,
+  expiration, `aud` (the Resource Authorization Server's own issuer identifier)
+  and `resource` (the MCP server's canonical resource identifier). A
+  declared-but-broken implementation is now an automatic Critical override in
+  `risk-scoring.md`, worse than not declaring the extension at all: it creates
+  false assurance that centralized IdP policy is enforced. New eval 4
+  (`broken-ema-audience-check`) exercises a first-party server whose ID-JAG
+  validation checks neither `aud` nor `resource`, a real, common PyJWT gotcha,
+  and confirms the override forces CRITICAL / do_not_connect even though the
+  raw weighted composite would otherwise round to MODERATE.
+- **secure-mcp-builder: AUTH-11, Enterprise-Managed Authorization.** New control
+  (SHOULD, remote HTTP, enterprise deployment), scoped like AUTH-7 rather than a
+  blanket MUST since real-world EMA adoption is about a month old with one
+  identity provider (Okta). If declared, ID-JAG validation must meet the same
+  bar AUTH-1 already sets for bearer tokens (JWKS signature, `iss`, `exp`,
+  `aud` against the Resource Authorization Server's own issuer identifier, and
+  `resource` against this server's canonical resource identifier: two distinct
+  claims, two distinct values, and `resource` is the one that says the token is
+  for you). A short addendum to `auth-patterns.md` Pattern A (not a new pattern,
+  since EMA is the same resource-server shape with an added grant type), and a
+  new ship-gate line in `review-gate-checklist.md`: declaring AUTH-11 without
+  confirmed-correct validation does not pass review.
+
+Trigger: MCP's Enterprise-Managed Authorization extension went stable on
+2026-06-19 (github.com/modelcontextprotocol/ext-auth), replacing per-server
+OAuth consent with IdP-centralized policy for enterprise deployments.
+
+### Changed
+- **secure-mcp-builder: em-dash cleanup** in `auth-patterns.md` and
+  `security-requirements.md`. Three pre-existing lines reworded to drop stray
+  em-dashes the earlier plain-language pass missed. Wording only, no semantic
+  change to any control.
+
 ## [0.4.1] - 2026-07-11
 
 ### Changed
