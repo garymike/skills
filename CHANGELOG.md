@@ -21,8 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   declared-but-broken implementation is now an automatic Critical override in
   `risk-scoring.md`, worse than not declaring the extension at all: it creates
   false assurance that centralized IdP policy is enforced. New eval 4 (`broken-ema-audience-check`) exercises a first-party
-  server whose ID-JAG validation skips the audience check, a real, common
-  PyJWT gotcha, and confirms the override forces CRITICAL / do_not_connect even
+  server whose ID-JAG validation checks neither `aud` nor `resource`, a real,
+  common PyJWT gotcha, and confirms the override forces CRITICAL / do_not_connect even
   though the raw weighted composite would otherwise round to MODERATE.
 - **secure-mcp-builder: AUTH-11, Enterprise-Managed Authorization.** New control
   (SHOULD, remote HTTP, enterprise deployment), scoped like AUTH-7 rather than a
