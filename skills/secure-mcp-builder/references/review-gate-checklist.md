@@ -19,7 +19,7 @@ Complete for every server before ship and after any material change. Every MUST 
 - [ ] Downstream calls use token exchange or scoped identity with per-call user entitlement checks (AUTH-3/5)
 - [ ] Sessions never used for authentication; no security decision reads a session ID (AUTH-4, ST-1)
 - [ ] Per-tool scope checks present and tested (AUTH-8); tool discovery scope-filtered where implemented, with user-scoped caching (AUTH-10)
-- [ ] (If EMA declared) ID-JAG validation confirmed correct, signature, `aud`, `iss`, `exp`, tested with a forged or wrong-audience token, not just presence-checked (AUTH-11)
+- [ ] (If EMA declared) ID-JAG validation confirmed correct, signature, `iss`, `exp`, `aud` (the Authorization Server's own issuer identifier) and `resource` (this server's canonical resource identifier), tested with a forged, wrong-`resource`, or wrong-`aud` token, not just presence-checked (AUTH-11)
 - [ ] (OAuth proxy) Per-client consent, exact redirect URI match, state lifecycle per AUTH-6
 - [ ] (Local) stdio transport; no unauthenticated listener; credential hygiene per AUTH-9
 

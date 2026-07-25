@@ -68,7 +68,8 @@ LABELS = {
     "purpose": "Purpose", "creator_publisher": "Publisher",
     "maintenance_signals": "Maintenance", "license": "License",
     "auth_client_to_server": "Client auth", "auth_downstream": "Downstream auth",
-    "token_passthrough": "Token passthrough", "stored_credential_risk": "Credential risk",
+    "token_passthrough": "Token passthrough", "ema_status": "EMA status",
+    "stored_credential_risk": "Credential risk",
     "notes": "Notes",
 }
 

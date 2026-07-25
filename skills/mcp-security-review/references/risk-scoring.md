@@ -17,7 +17,14 @@ Reproducible, challengeable scoring. Eight factors, 1-5 each (5 = worst), weight
 
 Composite = Σ(score × weight).
 
-`ema_status: verified_correct` does not raise the Auth strength score above the existing best tier (OAuth 2.1 + PKCE, audience-validated already scores 1): EMA is a centralized-policy enhancement on that same base, not a different mechanism. Record it instead as a positive differentiator in the report's posture paragraph, the same "positive signal, not required" treatment `inspection-checklist.md` Part E already gives published tool-definition manifests and signed releases.
+### `ema_status` and the Auth strength factor
+
+All four values have a defined treatment; record which one applied.
+
+- `verified_correct` does not raise the Auth strength score above the existing best tier (OAuth 2.1 + PKCE, audience-validated already scores 1): EMA is a centralized-policy enhancement on that same base, not a different mechanism. Record it instead as a positive differentiator in the report's posture paragraph, the same "positive signal, not required" treatment `inspection-checklist.md` Part E already gives published tool-definition manifests and signed releases.
+- `verified_broken` scores Auth strength 5, whatever the underlying client-to-server mechanism looks like on its own. A bypassable authorization path is the effective authorization path, so OAuth 2.1 + PKCE underneath does not earn its usual 1 here. Same reasoning the factor table already applies to token passthrough, which also scores 5 regardless of the surrounding flow.
+- `declared_unverified` raises Auth strength to at least 4, the standard unknown treatment from the opening rule. No exemption: the declaration itself is what a deploying organization relies on, so an unrun check on it is exactly the kind of ignorance that scores 4. If the mechanism already scores worse, keep the worse score; unknowns raise risk, never lower it.
+- `not_declared` is neutral and has no effect on any factor. The server is simply not using the extension; score Auth strength on its client-to-server mechanism alone.
 
 ## Rating map
 

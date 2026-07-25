@@ -20,7 +20,16 @@ The MCP server is an OAuth 2.1 protected resource. It never sees passwords and d
 
 ### Enterprise-Managed Authorization (optional addendum to Pattern A)
 
-If your deployment targets organizations with centralized IdP policy, declare `io.modelcontextprotocol/enterprise-managed-authorization` support and accept ID-JAGs as an additional grant type at your existing token endpoint. Validate an ID-JAG with the exact same checks Pattern A already requires for ordinary bearer tokens (signature against JWKS, `iss`, `exp`, `aud`); there is no separate, weaker validation path for this grant type. See AUTH-11.
+If your deployment targets organizations with centralized IdP policy, declare `io.modelcontextprotocol/enterprise-managed-authorization` support and accept ID-JAGs as an additional grant type at your existing token endpoint. Validate an ID-JAG with the same rigor Pattern A already applies to ordinary bearer tokens; there is no separate, weaker validation path for this grant type. What differs is which claim carries which identity: an ID-JAG's `aud` names the Resource Authorization Server it is presented to, and its separate `resource` claim names the MCP server it is for. Check both.
+
+| Claim | Must equal | Why |
+|---|---|---|
+| `iss` | The enterprise IdP's issuer identifier, matching the JWKS you verified the signature against | Pins the token to the identity provider this deployment actually trusts |
+| `aud` | Your Resource Authorization Server's own issuer identifier | The ID-JAG is addressed to the AS, not to the MCP server. Matching `aud` against your resource identifier is the common misreading |
+| `resource` | This server's canonical resource identifier, the same RFC 9728 one Pattern A publishes | This is the claim that says the token is for you. Skip it and an ID-JAG minted for a sibling MCP server behind the same AS is accepted here |
+| `exp` / `nbf` | Current time inside the validity window | Same expiry discipline as any bearer token |
+
+The access token the exchange yields is then audience-restricted to the MCP server named in `resource`, so Pattern A's per-request `aud` check on the access token itself still applies unchanged. Reject a valid-but-wrong-`resource` ID-JAG exactly as you reject a wrong-audience bearer token. Track each accepted ID-JAG's `jti` for its validity window and reject duplicates. See AUTH-11.
 
 ## Pattern B: Downstream access with user context
 

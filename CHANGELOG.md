@@ -15,11 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   additive so every existing recorded assessment stays schema-valid unmodified.
   New Part D checklist item: check whether a server declares
   `io.modelcontextprotocol/enterprise-managed-authorization`, and if so, verify
-  (source or live) that it actually validates the ID-JAG's signature, audience,
-  issuer, and expiration. A declared-but-broken implementation is now an
-  automatic Critical override in `risk-scoring.md`, worse than not declaring the
-  extension at all: it creates false assurance that centralized IdP policy is
-  enforced. New eval 4 (`broken-ema-audience-check`) exercises a first-party
+  (source or live) that it actually validates the ID-JAG's signature, issuer,
+  expiration, `aud` (the Resource Authorization Server's own issuer identifier)
+  and `resource` (the MCP server's canonical resource identifier). A
+  declared-but-broken implementation is now an automatic Critical override in
+  `risk-scoring.md`, worse than not declaring the extension at all: it creates
+  false assurance that centralized IdP policy is enforced. New eval 4 (`broken-ema-audience-check`) exercises a first-party
   server whose ID-JAG validation skips the audience check, a real, common
   PyJWT gotcha, and confirms the override forces CRITICAL / do_not_connect even
   though the raw weighted composite would otherwise round to MODERATE.
@@ -28,7 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   blanket MUST since real-world EMA adoption is about a month old with one
   identity provider (Okta). If declared, ID-JAG validation must meet the same
   bar AUTH-1 already sets for bearer tokens (JWKS signature, `iss`, `exp`,
-  `aud`). A short addendum to `auth-patterns.md` Pattern A (not a new pattern,
+  `aud` against the Resource Authorization Server's own issuer identifier, and
+  `resource` against this server's canonical resource identifier: two distinct
+  claims, two distinct values, and `resource` is the one that says the token is
+  for you). A short addendum to `auth-patterns.md` Pattern A (not a new pattern,
   since EMA is the same resource-server shape with an added grant type), and a
   new ship-gate line in `review-gate-checklist.md`: declaring AUTH-11 without
   confirmed-correct validation does not pass review.
@@ -36,6 +40,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Trigger: MCP's Enterprise-Managed Authorization extension went stable on
 2026-06-19 (github.com/modelcontextprotocol/ext-auth), replacing per-server
 OAuth consent with IdP-centralized policy for enterprise deployments.
+
+### Changed
+- **secure-mcp-builder: em-dash cleanup** in `auth-patterns.md` and
+  `security-requirements.md`. Three pre-existing lines reworded to drop stray
+  em-dashes the earlier plain-language pass missed. Wording only, no semantic
+  change to any control.
 
 ## [0.4.1] - 2026-07-11
 

@@ -4,10 +4,10 @@
 ## Executive summary
 1 Critical · 0 High · 1 Moderate · 0 Low · 0 Info
 
-helpdesk-mcp is a first-party remote server fronting the corporate ticketing system, expanding from a pilot to company-wide rollout. It declares Enterprise-Managed Authorization to satisfy the planned centralized-access requirement, but its Authorization Server accepts any validly-signed ID-JAG regardless of audience, so a token minted for any other application in the same IdP tenant is accepted here too. That is worse than not declaring EMA at all: it creates the appearance of centralized enterprise control while remaining bypassable.
+helpdesk-mcp is a first-party remote server fronting the corporate ticketing system, expanding from a pilot to company-wide rollout. It declares Enterprise-Managed Authorization to satisfy the planned centralized-access requirement, but its Authorization Server accepts any validly-signed ID-JAG without checking either the aud claim or the resource claim, so a token minted for a sibling MCP server behind the same Authorization Server is accepted here too. That is worse than not declaring EMA at all: it creates the appearance of centralized enterprise control while remaining bypassable.
 
 **Top findings**
-- **CRITICAL** Enterprise-Managed Authorization declared but ID-JAG audience is never validated (Finding-01)
+- **CRITICAL** Enterprise-Managed Authorization declared but the ID-JAG's aud and resource claims are never validated (Finding-01)
 - **MODERATE** Excess OAuth scope requested across a mixed read/write toolset (Finding-02)
 
 **Scope:** Assess helpdesk-mcp before expanding it from the platform-team pilot to company-wide use.
@@ -15,16 +15,16 @@ helpdesk-mcp is a first-party remote server fronting the corporate ticketing sys
 _Full review · modes code · 2026-07-21 · checks not performed: 2_
 
 ## Recommendations
-1. Fix ID-JAG audience validation before any expansion beyond the pilot: pass this server's resource identifier as the required audience and reject mismatches, then re-verify with a forged wrong-audience token. (findings Finding-01 · AUTH-11, AUTH-1)
+1. Fix ID-JAG claim validation before any expansion beyond the pilot: check aud against the Authorization Server's own issuer identifier and check the resource claim against this server's canonical resource identifier, rejecting either mismatch, then re-verify with a wrong-resource token and a wrong-audience token. (findings Finding-01 · AUTH-11, AUTH-1)
 2. Split the requested OAuth scope into tickets.read and tickets.write; drop tickets.admin. (findings Finding-02 · AUTH-8)
 
 ## Findings
 
-### Finding-01 — Enterprise-Managed Authorization declared but ID-JAG audience is never validated  ·  CRITICAL  ·  _reasoned_
+### Finding-01 — Enterprise-Managed Authorization declared but the ID-JAG's aud and resource claims are never validated  ·  CRITICAL  ·  _reasoned_
 - **Category:** Token Exposure / Broken Authorization · Part D · AUTH-11, AUTH-1
 - **Affected:** Authorization Server: validate_id_jag()
-- **Description:** The server declares io.modelcontextprotocol/enterprise-managed-authorization in its initialize response, so a connecting client's administrator will treat it as governed by centralized IdP policy. Its token-validation function verifies the ID-JAG's signature against the IdP's JWKS and checks expiration, but never checks the aud claim against this server's own resource identifier.
-- **Impact:** Any validly-signed ID-JAG issued by the same IdP tenant for a different application is accepted here. An attacker, or a compromised, unrelated internal app, that can obtain any ID-JAG from this IdP gains a valid access token to the ticketing system, entirely bypassing the per-server policy the IdP admin believes they configured. This is a confused-deputy, audience-confusion bypass of the exact control EMA exists to provide.
+- **Description:** The server declares io.modelcontextprotocol/enterprise-managed-authorization in its initialize response, so a connecting client's administrator will treat it as governed by centralized IdP policy. Its token-validation function verifies the ID-JAG's signature against the IdP's JWKS and checks expiration, but leaves two required checks undone. First, jwt.decode is called with neither an audience= nor an issuer= kwarg, so the aud claim is never checked against the Resource Authorization Server's own issuer identifier. Second, the function never inspects the resource claim at all, so nothing establishes that this ID-JAG was minted for this MCP server. Both checks are required and PyJWT enforces neither unless told to: aud names the Authorization Server the token is presented to, while the separate resource claim names the MCP server it is for. Note that pinning the key through the JWKS endpoint (jwks_client.get_signing_key) does implicitly narrow the accepted key material to one issuer, so the absent issuer= check is a real but secondary gap next to the primary aud-versus-resource confusion.
+- **Impact:** Any validly-signed ID-JAG issued by the same IdP tenant is accepted here, including one minted for a sibling MCP server behind the same Authorization Server. The unchecked resource claim is what makes that sibling-server replay work, and the unchecked aud leaves the token unpinned to the Authorization Server it was actually addressed to. An attacker, or a compromised, unrelated internal app, that can obtain any ID-JAG from this IdP gains a valid access token to the ticketing system, entirely bypassing the per-server policy the IdP admin believes they configured. This is a confused-deputy bypass of the exact control EMA exists to provide.
 - **Likelihood:** Moderate to high: any other EMA-aware application in the same enterprise IdP tenant is a viable source of a wrong-audience ID-JAG; no privileged access is required to obtain one, only a connection to any other org-approved MCP server or app under the same IdP.
 - **Evidence:** `auth/validate.py:41`
   ```
@@ -32,10 +32,11 @@ _Full review · modes code · 2026-07-21 · checks not performed: 2_
       header = jwt.get_unverified_header(token)
       key = jwks_client.get_signing_key(header["kid"])
       claims = jwt.decode(token, key.key, algorithms=["RS256"])
-      # no audience=... kwarg: PyJWT does not check aud unless told to
+      # no audience= and no issuer= kwarg: PyJWT checks neither unless told to
+      # and claims["resource"] is never read: nothing ties this token to this server
       return claims
   ```
-- **Remediation:** Pass audience="helpdesk-mcp" (this server's canonical resource identifier) to jwt.decode, and reject any ID-JAG whose aud does not match. Add a test that presents a validly-signed, wrong-audience token and asserts rejection before re-enabling the EMA declaration. (AUTH-11, AUTH-1)
+- **Remediation:** Validate both claims. Pass the Resource Authorization Server's own issuer identifier as audience= and the IdP's issuer as issuer= to jwt.decode, then separately assert that claims["resource"] equals this server's canonical resource identifier (https://mcp.helpdesk.acme.internal) and reject any mismatch. Add tests that present a validly-signed ID-JAG with the wrong resource, and another with the wrong aud, and assert rejection of both before re-enabling the EMA declaration. (AUTH-11, AUTH-1)
 - **Status:** open
 
 ### Finding-02 — Excess OAuth scope requested across a mixed read/write toolset  ·  MODERATE  ·  _reasoned_
@@ -65,7 +66,7 @@ _Full review · modes code · 2026-07-21 · checks not performed: 2_
 - **Token Passthrough:** False
 - **Ema Status:** verified_broken
 - **Stored Credential Risk:** low
-- **Notes:** OAuth 2.1/PKCE and per-user downstream context are sound. The critical gap is entirely in ID-JAG audience validation (F-01).
+- **Notes:** OAuth 2.1/PKCE and per-user downstream context are sound. The critical gap is entirely in ID-JAG claim validation, both aud and resource (F-01).
 
 ## Risk rating
 | Factor | Score |
@@ -85,6 +86,6 @@ Overrides: ema_status: verified_broken -> CRITICAL, recommendation do_not_connec
 ## Limitations & disclaimer
 Point-in-time assessment (2026-07-21) against the reviewed commit. Static/code review only; the Authorization Server was not exercised live with a forged token in this pass. This report is not a warranty.
 
-F-01 is reasoned (static/definition review): the missing audience check is visible in source, not confirmed by presenting a live forged token. Run the skill-security-review validator, or a live authorization-attack pass, to upgrade to confirmed.
+F-01 is reasoned (static/definition review): the missing aud and resource checks are visible in source, not confirmed by presenting a live forged token. Run the skill-security-review validator, or a live authorization-attack pass, to upgrade to confirmed.
 
 Checks not performed (coverage gaps): part-e-runtime, sandbox.
