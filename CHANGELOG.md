@@ -6,6 +6,32 @@ All notable changes to this repo are documented here. Versions match the
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-07-26
+
+### Fixed
+- **mcp-security-review: render `permissions`, `hosting`, and `protocols`.** These three
+  `technical_assessment` fields were schema-valid but never reached either report body,
+  HTML or Markdown, only the raw JSON appendix; pre-existing since the skill's original
+  2026-07-08 publish. Both renderers now show a subsection for each, in the schema's
+  declared field order.
+- **mcp-security-review: Markdown report parity with HTML.** `render_md` built field
+  labels and boolean values inline instead of through the shared `label()`/`fmt_val()`
+  helpers `render_html` already used, so `ema_status` showed as "Ema status" in Markdown
+  against "EMA status" in HTML, and `token_passthrough` showed Python's `True`/`False`
+  instead of "Yes"/"No". Both formats now derive from the same helpers, plus a new
+  `prep_kv()` shared by both for the hosting/protocols fields, so hardcoding either
+  renderer's exact key list can no longer let a schema-valid extra key silently vanish
+  from one format but not the other.
+- **mcp-security-review: Markdown auth section had no heading.** A first attempt at the
+  fix above gave Permissions, Hosting, and Protocols their own bold headings but left the
+  existing authentication section unlabeled; under CommonMark, a blank line alone does
+  not end a bullet list, so the auth fields, including `ema_status`, rendered as trailing
+  items of the Protocols list rather than their own section. Caught by an independent
+  review before merge and verified fixed with a CommonMark-compliant parser.
+- Two em-dashes fixed in `evals/evals.json` and `evals/reference-outputs/2-critical-findings-crm.assessment.json`;
+  the latter was in the `permissions` field, previously invisible since permissions was
+  never rendered before this fix.
+
 ## [0.5.0] - 2026-07-21
 
 ### Added
