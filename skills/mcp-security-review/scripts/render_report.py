@@ -71,6 +71,10 @@ LABELS = {
     "token_passthrough": "Token passthrough", "ema_status": "EMA status",
     "stored_credential_risk": "Credential risk",
     "notes": "Notes",
+    "hosting_model": "Hosting model", "install_methods": "Install methods",
+    "install_time_behavior": "Install-time behavior", "data_residency": "Data residency",
+    "mcp_spec_version": "MCP spec version", "transport": "Transport",
+    "forward_compat_notes": "Forward-compat notes",
 }
 
 
@@ -529,6 +533,25 @@ def render_html(a: dict, expand_appendix: bool = False) -> str:
                 block += f'<div class="cap-anno">Annotations: {esc(c.get("annotations"))}</div>'
             cap_html.append(block + '</div>')
         tech.append(subsection("Capabilities", "#5f7150", '<div class="caps-grid">' + "".join(cap_html) + '</div>'))
+    perms = ta.get("permissions", [])
+    if perms:
+        perms_html = '<ul style="margin:0;padding-left:20px">' + "".join(f'<li>{esc(p)}</li>' for p in perms) + '</ul>'
+        tech.append(subsection("Permissions", "#8a8075", perms_html))
+    hosting = ta.get("hosting", {})
+    if hosting:
+        tech.append(subsection("Hosting", "#766152", kv2([
+            ("hosting_model", (hosting.get("hosting_model") or "").replace("_", " ")),
+            ("install_methods", ", ".join(hosting.get("install_methods", []))),
+            ("install_time_behavior", hosting.get("install_time_behavior")),
+            ("data_residency", hosting.get("data_residency")),
+        ])))
+    proto = ta.get("protocols", {})
+    if proto:
+        tech.append(subsection("Protocols", "#97793d", kv2([
+            ("mcp_spec_version", proto.get("mcp_spec_version")),
+            ("transport", ", ".join(proto.get("transport", []))),
+            ("forward_compat_notes", proto.get("forward_compat_notes")),
+        ])))
     auth = ta.get("authentication_and_credential_risk", {})
     if auth:
         tech.append(subsection("Authentication &amp; credential risk", "#9c5a44", kv2(auth.items())))
@@ -653,14 +676,33 @@ def render_md(a: dict) -> str:
     ta = a.get("technical_assessment", {})
     L += ["", "## Technical assessment"]
     if ta.get("profile"):
-        L += [f"- **{k.replace('_',' ').title()}:** {v}" for k, v in ta["profile"].items() if v]
+        L += [f"- **{label(k)}:** {fmt_val(v)}" for k, v in ta["profile"].items() if v]
     if ta.get("capabilities"):
         L += ["", "| Tool | Function | Class |", "|---|---|---|"]
         L += [f"| `{c.get('name','')}` | {c.get('function','')} | {c.get('class','')} |" for c in ta["capabilities"]]
+    if ta.get("permissions"):
+        L += ["", "**Permissions**"]
+        L += [f"- {p}" for p in ta["permissions"]]
+    hosting = ta.get("hosting", {})
+    if hosting:
+        L += ["", "**Hosting**"]
+        for k, v in hosting.items():
+            if v in (None, "", []):
+                continue
+            if k == "hosting_model":
+                v = v.replace("_", " ")
+            elif isinstance(v, list):
+                v = ", ".join(v)
+            L.append(f"- **{label(k)}:** {fmt_val(v)}")
+    proto = ta.get("protocols", {})
+    if proto:
+        L += ["", "**Protocols**"]
+        L += [f"- **{label(k)}:** {fmt_val(', '.join(v) if isinstance(v, list) else v)}"
+              for k, v in proto.items() if v not in (None, "", [])]
     auth = ta.get("authentication_and_credential_risk", {})
     if auth:
         L.append("")
-        L += [f"- **{k.replace('_',' ').title()}:** {v}" for k, v in auth.items()]
+        L += [f"- **{label(k)}:** {fmt_val(v)}" for k, v in auth.items()]
 
     rr = a.get("risk_rating", {})
     if rr.get("factor_scores"):
