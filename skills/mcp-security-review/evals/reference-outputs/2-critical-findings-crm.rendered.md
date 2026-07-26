@@ -81,6 +81,7 @@ _Full review · modes code · 2026-07-03 · checks not performed: 2_
 - **Transport:** stdio
 - **Forward-compat notes:** No sessions; low 2026-07-28 migration exposure.
 
+**Authentication & credential risk**
 - **Client auth:** none
 - **Downstream auth:** static hardcoded API key
 - **Token passthrough:** No

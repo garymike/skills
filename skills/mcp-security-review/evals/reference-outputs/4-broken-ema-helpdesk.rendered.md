@@ -75,6 +75,7 @@ _Full review · modes code · 2026-07-21 · checks not performed: 2_
 - **Transport:** streamable-http
 - **Forward-compat notes:** No session-derived security decisions observed; compatible with the stateless 2026-07-28 direction.
 
+**Authentication & credential risk**
 - **Client auth:** oauth21_pkce
 - **Downstream auth:** Service identity with enforced per-user context (AUTH-5) against the ticketing API.
 - **Token passthrough:** No

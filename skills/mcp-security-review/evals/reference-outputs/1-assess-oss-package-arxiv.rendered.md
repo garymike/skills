@@ -84,6 +84,7 @@ _Standard review · modes code · 2026-07-02 · checks not performed: 1_
 - **Transport:** stdio
 - **Forward-compat notes:** No sessions; no Roots/Sampling dependence observed; low 2026-07-28 migration exposure.
 
+**Authentication & credential risk**
 - **Client auth:** none
 - **Downstream auth:** anonymous public arXiv API
 - **Token passthrough:** No

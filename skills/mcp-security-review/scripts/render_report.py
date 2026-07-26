@@ -88,6 +88,21 @@ def fmt_val(v):
     return v
 
 
+def prep_kv(d: dict) -> list:
+    """Format a technical_assessment sub-object's items identically for both renderers:
+    hosting_model's underscores become spaces, list values are comma-joined. Iterates
+    whatever keys are actually present (the schema allows extra ones on hosting/protocols),
+    so neither renderer hardcodes a key list that could silently drop one."""
+    out = []
+    for k, v in (d or {}).items():
+        if k == "hosting_model" and isinstance(v, str):
+            v = v.replace("_", " ")
+        elif isinstance(v, list):
+            v = ", ".join(v)
+        out.append((k, v))
+    return out
+
+
 VERIF_DESC = {
     "reasoned": "Identified by static / definition review; not exploited.",
     "observed": "Seen in real behavior or traffic; not weaponized.",
@@ -537,21 +552,12 @@ def render_html(a: dict, expand_appendix: bool = False) -> str:
     if perms:
         perms_html = '<ul style="margin:0;padding-left:20px">' + "".join(f'<li>{esc(p)}</li>' for p in perms) + '</ul>'
         tech.append(subsection("Permissions", "#8a8075", perms_html))
-    hosting = ta.get("hosting", {})
-    if hosting:
-        tech.append(subsection("Hosting", "#766152", kv2([
-            ("hosting_model", (hosting.get("hosting_model") or "").replace("_", " ")),
-            ("install_methods", ", ".join(hosting.get("install_methods", []))),
-            ("install_time_behavior", hosting.get("install_time_behavior")),
-            ("data_residency", hosting.get("data_residency")),
-        ])))
-    proto = ta.get("protocols", {})
-    if proto:
-        tech.append(subsection("Protocols", "#97793d", kv2([
-            ("mcp_spec_version", proto.get("mcp_spec_version")),
-            ("transport", ", ".join(proto.get("transport", []))),
-            ("forward_compat_notes", proto.get("forward_compat_notes")),
-        ])))
+    hosting_pairs = [(k, v) for k, v in prep_kv(ta.get("hosting")) if v not in (None, "")]
+    if hosting_pairs:
+        tech.append(subsection("Hosting", "#766152", kv2(hosting_pairs)))
+    proto_pairs = [(k, v) for k, v in prep_kv(ta.get("protocols")) if v not in (None, "")]
+    if proto_pairs:
+        tech.append(subsection("Protocols", "#97793d", kv2(proto_pairs)))
     auth = ta.get("authentication_and_credential_risk", {})
     if auth:
         tech.append(subsection("Authentication &amp; credential risk", "#9c5a44", kv2(auth.items())))
@@ -683,26 +689,19 @@ def render_md(a: dict) -> str:
     if ta.get("permissions"):
         L += ["", "**Permissions**"]
         L += [f"- {p}" for p in ta["permissions"]]
-    hosting = ta.get("hosting", {})
-    if hosting:
+    hosting_pairs = [(k, v) for k, v in prep_kv(ta.get("hosting")) if v not in (None, "")]
+    if hosting_pairs:
         L += ["", "**Hosting**"]
-        for k, v in hosting.items():
-            if v in (None, "", []):
-                continue
-            if k == "hosting_model":
-                v = v.replace("_", " ")
-            elif isinstance(v, list):
-                v = ", ".join(v)
-            L.append(f"- **{label(k)}:** {fmt_val(v)}")
-    proto = ta.get("protocols", {})
-    if proto:
+        L += [f"- **{label(k)}:** {fmt_val(v)}" for k, v in hosting_pairs]
+    proto_pairs = [(k, v) for k, v in prep_kv(ta.get("protocols")) if v not in (None, "")]
+    if proto_pairs:
         L += ["", "**Protocols**"]
-        L += [f"- **{label(k)}:** {fmt_val(', '.join(v) if isinstance(v, list) else v)}"
-              for k, v in proto.items() if v not in (None, "", [])]
-    auth = ta.get("authentication_and_credential_risk", {})
-    if auth:
-        L.append("")
-        L += [f"- **{label(k)}:** {fmt_val(v)}" for k, v in auth.items()]
+        L += [f"- **{label(k)}:** {fmt_val(v)}" for k, v in proto_pairs]
+    auth_pairs = [(k, v) for k, v in (ta.get("authentication_and_credential_risk") or {}).items()
+                  if v not in (None, "")]
+    if auth_pairs:
+        L += ["", "**Authentication & credential risk**"]
+        L += [f"- **{label(k)}:** {fmt_val(v)}" for k, v in auth_pairs]
 
     rr = a.get("risk_rating", {})
     if rr.get("factor_scores"):
