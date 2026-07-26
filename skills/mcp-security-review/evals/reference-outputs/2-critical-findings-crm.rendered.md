@@ -59,18 +59,33 @@ _Full review · modes code · 2026-07-03 · checks not performed: 2_
 
 ## Technical assessment
 - **Purpose:** Exposes the CRM to agents for the pilot group.
-- **Creator Publisher:** first-party
-- **Maintenance Signals:** Active internal repo; dependencies pinned, scan clean.
+- **Publisher:** first-party
+- **Maintenance:** Active internal repo; dependencies pinned, scan clean.
 - **License:** internal
 
 | Tool | Function | Class |
 |---|---|---|
 | `crm_run_query` | Executes model-supplied queries against the CRM | read |
 
-- **Auth Client To Server:** none
-- **Auth Downstream:** static hardcoded API key
-- **Token Passthrough:** False
-- **Stored Credential Risk:** critical
+**Permissions**
+- CRM API, full read scope of the static key
+
+**Hosting**
+- **Hosting model:** local stdio
+- **Install methods:** per-developer machine
+- **Install-time behavior:** standard Python package; no fetch-and-execute observed
+- **Data residency:** local
+
+**Protocols**
+- **MCP spec version:** verify-at-pin
+- **Transport:** stdio
+- **Forward-compat notes:** No sessions; low 2026-07-28 migration exposure.
+
+**Authentication & credential risk**
+- **Client auth:** none
+- **Downstream auth:** static hardcoded API key
+- **Token passthrough:** No
+- **Credential risk:** critical
 - **Notes:** Compromise of any clone equals full CRM access; revocation currently means rotating a key that is in git history.
 
 ## Risk rating

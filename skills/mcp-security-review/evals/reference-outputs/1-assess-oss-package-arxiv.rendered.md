@@ -57,8 +57,8 @@ _Standard review · modes code · 2026-07-02 · checks not performed: 1_
 
 ## Technical assessment
 - **Purpose:** Bridges AI assistants to arXiv: search, download, and read paper content into model context, with local caching.
-- **Creator Publisher:** Individual maintainer (blazickjp), ~400 stars
-- **Maintenance Signals:** Active in 2026; single primary maintainer.
+- **Publisher:** Individual maintainer (blazickjp), ~400 stars
+- **Maintenance:** Active in 2026; single primary maintainer.
 - **License:** Open source (verify current file at pin time)
 
 | Tool | Function | Class |
@@ -68,10 +68,27 @@ _Standard review · modes code · 2026-07-02 · checks not performed: 1_
 | `list_papers` | List locally cached papers | read |
 | `read_paper` | Load cached paper text into model context | read |
 
-- **Auth Client To Server:** none
-- **Auth Downstream:** anonymous public arXiv API
-- **Token Passthrough:** False
-- **Stored Credential Risk:** low
+**Permissions**
+- No credentials or OAuth scopes
+- Filesystem: one configurable cache directory
+- Network: arxiv.org egress only by design (verify in sandbox)
+
+**Hosting**
+- **Hosting model:** local stdio
+- **Install methods:** uv tool install (PyPI), mcpb desktop bundle
+- **Install-time behavior:** Standard Python package; no fetch-and-execute observed in the install path.
+- **Data residency:** Local (public arXiv content plus local cache)
+
+**Protocols**
+- **MCP spec version:** verify-at-pin
+- **Transport:** stdio
+- **Forward-compat notes:** No sessions; no Roots/Sampling dependence observed; low 2026-07-28 migration exposure.
+
+**Authentication & credential risk**
+- **Client auth:** none
+- **Downstream auth:** anonymous public arXiv API
+- **Token passthrough:** No
+- **Credential risk:** low
 - **Notes:** No credentials exist to steal; host compromise yields only cached public papers.
 
 ## Risk rating

@@ -79,7 +79,7 @@
     "capabilities": [
       { "name": "crm_run_query", "function": "Executes model-supplied queries against the CRM", "class": "read", "annotations": "none declared" }
     ],
-    "permissions": ["CRM API — full read scope of the static key"],
+    "permissions": ["CRM API, full read scope of the static key"],
     "hosting": {
       "hosting_model": "local_stdio",
       "install_methods": ["per-developer machine"],

@@ -49,8 +49,8 @@ _Full review · modes code · 2026-07-21 · checks not performed: 2_
 
 ## Technical assessment
 - **Purpose:** Expose the corporate ticketing system (create, search, and close helpdesk tickets) to agents company-wide.
-- **Creator Publisher:** first-party (Platform Engineering)
-- **Maintenance Signals:** Active internal repo, weekly releases, 3 maintainers.
+- **Publisher:** first-party (Platform Engineering)
+- **Maintenance:** Active internal repo, weekly releases, 3 maintainers.
 - **License:** internal
 
 | Tool | Function | Class |
@@ -61,11 +61,26 @@ _Full review · modes code · 2026-07-21 · checks not performed: 2_
 | `helpdesk_create_ticket` | Open a new ticket in a queue. | write |
 | `helpdesk_close_ticket` | Close a ticket with a resolution note. | write |
 
-- **Auth Client To Server:** oauth21_pkce
-- **Auth Downstream:** Service identity with enforced per-user context (AUTH-5) against the ticketing API.
-- **Token Passthrough:** False
-- **Ema Status:** verified_broken
-- **Stored Credential Risk:** low
+**Permissions**
+- tickets.admin (requested for the full toolset; helpdesk_create_ticket and helpdesk_close_ticket need write, see F-02)
+
+**Hosting**
+- **Hosting model:** remote self
+- **Install methods:** Internal service catalog entry; clients connect to https://mcp.helpdesk.acme.internal
+- **Install-time behavior:** No install; remote HTTP endpoint.
+- **Data residency:** Company-owned infrastructure, same region as the ticketing system.
+
+**Protocols**
+- **MCP spec version:** 2025-11-25
+- **Transport:** streamable-http
+- **Forward-compat notes:** No session-derived security decisions observed; compatible with the stateless 2026-07-28 direction.
+
+**Authentication & credential risk**
+- **Client auth:** oauth21_pkce
+- **Downstream auth:** Service identity with enforced per-user context (AUTH-5) against the ticketing API.
+- **Token passthrough:** No
+- **EMA status:** verified_broken
+- **Credential risk:** low
 - **Notes:** OAuth 2.1/PKCE and per-user downstream context are sound. The critical gap is entirely in ID-JAG claim validation, both aud and resource (F-01).
 
 ## Risk rating

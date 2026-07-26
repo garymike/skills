@@ -62,7 +62,7 @@
           "type": "content"
         },
         {
-          "text": "assessment.json validates against schema/assessment.schema.json; the Critical hardcoded-secret finding carries redacted evidence (secret_masked true, a masked value — never the live key) and remediation.control_ids linking the fix to controls",
+          "text": "assessment.json validates against schema/assessment.schema.json; the Critical hardcoded-secret finding carries redacted evidence (secret_masked true, a masked value, never the live key) and remediation.control_ids linking the fix to controls",
           "type": "content"
         }
       ]

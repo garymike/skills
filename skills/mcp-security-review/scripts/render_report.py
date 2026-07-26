@@ -71,6 +71,10 @@ LABELS = {
     "token_passthrough": "Token passthrough", "ema_status": "EMA status",
     "stored_credential_risk": "Credential risk",
     "notes": "Notes",
+    "hosting_model": "Hosting model", "install_methods": "Install methods",
+    "install_time_behavior": "Install-time behavior", "data_residency": "Data residency",
+    "mcp_spec_version": "MCP spec version", "transport": "Transport",
+    "forward_compat_notes": "Forward-compat notes",
 }
 
 
@@ -82,6 +86,21 @@ def fmt_val(v):
     if isinstance(v, bool):
         return "Yes" if v else "No"
     return v
+
+
+def prep_kv(d: dict) -> list:
+    """Format a technical_assessment sub-object's items identically for both renderers:
+    hosting_model's underscores become spaces, list values are comma-joined. Iterates
+    whatever keys are actually present (the schema allows extra ones on hosting/protocols),
+    so neither renderer hardcodes a key list that could silently drop one."""
+    out = []
+    for k, v in (d or {}).items():
+        if k == "hosting_model" and isinstance(v, str):
+            v = v.replace("_", " ")
+        elif isinstance(v, list):
+            v = ", ".join(v)
+        out.append((k, v))
+    return out
 
 
 VERIF_DESC = {
@@ -529,6 +548,16 @@ def render_html(a: dict, expand_appendix: bool = False) -> str:
                 block += f'<div class="cap-anno">Annotations: {esc(c.get("annotations"))}</div>'
             cap_html.append(block + '</div>')
         tech.append(subsection("Capabilities", "#5f7150", '<div class="caps-grid">' + "".join(cap_html) + '</div>'))
+    perms = ta.get("permissions", [])
+    if perms:
+        perms_html = '<ul style="margin:0;padding-left:20px">' + "".join(f'<li>{esc(p)}</li>' for p in perms) + '</ul>'
+        tech.append(subsection("Permissions", "#8a8075", perms_html))
+    hosting_pairs = [(k, v) for k, v in prep_kv(ta.get("hosting")) if v not in (None, "")]
+    if hosting_pairs:
+        tech.append(subsection("Hosting", "#766152", kv2(hosting_pairs)))
+    proto_pairs = [(k, v) for k, v in prep_kv(ta.get("protocols")) if v not in (None, "")]
+    if proto_pairs:
+        tech.append(subsection("Protocols", "#97793d", kv2(proto_pairs)))
     auth = ta.get("authentication_and_credential_risk", {})
     if auth:
         tech.append(subsection("Authentication &amp; credential risk", "#9c5a44", kv2(auth.items())))
@@ -653,14 +682,26 @@ def render_md(a: dict) -> str:
     ta = a.get("technical_assessment", {})
     L += ["", "## Technical assessment"]
     if ta.get("profile"):
-        L += [f"- **{k.replace('_',' ').title()}:** {v}" for k, v in ta["profile"].items() if v]
+        L += [f"- **{label(k)}:** {fmt_val(v)}" for k, v in ta["profile"].items() if v]
     if ta.get("capabilities"):
         L += ["", "| Tool | Function | Class |", "|---|---|---|"]
         L += [f"| `{c.get('name','')}` | {c.get('function','')} | {c.get('class','')} |" for c in ta["capabilities"]]
-    auth = ta.get("authentication_and_credential_risk", {})
-    if auth:
-        L.append("")
-        L += [f"- **{k.replace('_',' ').title()}:** {v}" for k, v in auth.items()]
+    if ta.get("permissions"):
+        L += ["", "**Permissions**"]
+        L += [f"- {p}" for p in ta["permissions"]]
+    hosting_pairs = [(k, v) for k, v in prep_kv(ta.get("hosting")) if v not in (None, "")]
+    if hosting_pairs:
+        L += ["", "**Hosting**"]
+        L += [f"- **{label(k)}:** {fmt_val(v)}" for k, v in hosting_pairs]
+    proto_pairs = [(k, v) for k, v in prep_kv(ta.get("protocols")) if v not in (None, "")]
+    if proto_pairs:
+        L += ["", "**Protocols**"]
+        L += [f"- **{label(k)}:** {fmt_val(v)}" for k, v in proto_pairs]
+    auth_pairs = [(k, v) for k, v in (ta.get("authentication_and_credential_risk") or {}).items()
+                  if v not in (None, "")]
+    if auth_pairs:
+        L += ["", "**Authentication & credential risk**"]
+        L += [f"- **{label(k)}:** {fmt_val(v)}" for k, v in auth_pairs]
 
     rr = a.get("risk_rating", {})
     if rr.get("factor_scores"):
