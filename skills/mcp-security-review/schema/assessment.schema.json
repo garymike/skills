@@ -142,7 +142,15 @@
           "properties": {
             "mcp_spec_version": { "type": "string" },
             "transport": { "type": "array", "items": { "type": "string" } },
-            "forward_compat_notes": { "type": "string" }
+            "forward_compat_notes": { "type": "string" },
+            "tasks_status": {
+              "enum": ["not_declared", "declared_unverified", "verified_bounded", "verified_unbounded"],
+              "description": "Tasks extension (io.modelcontextprotocol/tasks), the 2026-07-28 async long-running-work lifecycle. not_declared: the server does not advertise it. declared_unverified: it does, but review could not establish resource bounds. verified_bounded: task creation is rate-limited, the advertised TTL is enforced, and tasks/cancel actually stops the underlying work. verified_unbounded: a cheap request can commit unbounded durable server-side work, or cancel only marks status without freeing resources. Uses bounded/unbounded rather than safe/unsafe because the finding is about resource limits, an availability concern that deliberately carries no scoring override."
+            },
+            "mcp_apps_status": {
+              "enum": ["not_declared", "declared_unreviewed", "reviewed_safe", "reviewed_unsafe"],
+              "description": "MCP Apps, the 2026-07-28 interactive-UI extension. Declared per tool via _meta.ui.resourceUri pointing at a ui:// resource, not as a server capability. not_declared: no tool declares a UI. declared_unreviewed: at least one does, but the ui:// resource was not fetched and read. reviewed_safe: the resource was read and its HTML, csp.connectDomains, csp.resourceDomains, and requested permissions are all justified by the tool's purpose. reviewed_unsafe: the UI builds HTML dynamically from tool output or upstream data, or csp permits origins the publisher does not control, or it requests capabilities unrelated to its function."
+            }
           }
         },
         "authentication_and_credential_risk": {
@@ -156,6 +164,10 @@
             "ema_status": {
               "enum": ["not_declared", "declared_unverified", "verified_correct", "verified_broken"],
               "description": "Enterprise-Managed Authorization (io.modelcontextprotocol/enterprise-managed-authorization). not_declared: the server does not advertise the extension. declared_unverified: it does, but review mode could not establish whether ID-JAG validation is correct (static-only with no AS source, or no live target). verified_correct: source-confirmed or live-tested to validate signature, iss, exp, aud against the Resource Authorization Server's own issuer identifier, and the separate resource claim against the MCP server's own canonical resource identifier. verified_broken: declares support but a forged, wrong-resource, wrong-audience, or expired ID-JAG would be accepted, or validation is absent/incomplete in source."
+            },
+            "handle_security": {
+              "enum": ["not_applicable", "unverified", "verified_sound", "verified_broken"],
+              "description": "Security of cross-call handles under the stateless 2026-07-28 core (any opaque handle the client echoes back, including a Tasks taskId). not_applicable: stdio or any server with no cross-call handle surface. unverified: the surface exists but review could not establish how handles are generated or bound. verified_sound: source-confirmed or live-tested to be CSPRNG-generated, bound to the authenticated user, and expiring. verified_broken: handles are predictable, unbound, or non-expiring, so another caller can resume, read, or cancel someone else's work. Named without a declared_ prefix on purpose: unlike an extension, a handle surface is not declared, it simply exists on any HTTP server."
             },
             "stored_credential_risk": { "enum": ["low", "moderate", "high", "critical"] },
             "notes": { "type": "string" }
@@ -243,8 +255,8 @@
     },
     "controlId": {
       "type": "string",
-      "pattern": "^(AUTH|INP|OUT|ST|SEC|LOG|SUP|AGT)-[0-9]+$",
-      "description": "secure-mcp-builder control id, e.g. AUTH-2, INP-5."
+      "pattern": "^(AUTH|INP|OUT|ST|SEC|LOG|SUP|AGT|UI)-[0-9]+$",
+      "description": "secure-mcp-builder control id, e.g. AUTH-2, INP-5, UI-1."
     },
     "severity": { "enum": ["critical", "high", "moderate", "low", "info"] },
     "factorScore": { "type": "integer", "minimum": 1, "maximum": 5 },
