@@ -13,9 +13,18 @@ there too and bump ALGORITHM.
 
 Canonicalization (do not change without bumping ALGORITHM):
   1. For each tool keep exactly the security-relevant fields, when present:
-     name, description, inputSchema, outputSchema, annotations. (Annotations are
-     included on purpose: an annotation flip, e.g. destructiveHint true -> false,
-     is a rug-pull signal and must change the hash.)
+     name, description, inputSchema, outputSchema, annotations, and _meta.ui.
+     (Annotations are included on purpose: an annotation flip, e.g.
+     destructiveHint true -> false, is a rug-pull signal and must change the
+     hash. _meta.ui is the MCP Apps declaration added in the 2026-07-28 spec:
+     repointing it at different UI is the same class of silent mutation. Only
+     _meta.ui is kept, never the whole open _meta namespace.)
+
+     Algorithm version note: sha256-canon-v1 did not hash _meta.ui. A v1 hash
+     and a v2 hash of the same unchanged tool set therefore differ. That
+     difference alone is NOT a rug-pull signal; re-baseline once at v2, then
+     compare v2 to v2. The emitted manifest names its algorithm and hashed
+     fields so the two are always distinguishable.
   2. Serialize with sorted keys (recursively), UTF-8, and no insignificant
      whitespace: json.dumps(obj, sort_keys=True, separators=(",", ":"),
      ensure_ascii=False). This is JSON-Canonicalization-style; for cross-language
@@ -44,8 +53,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-ALGORITHM = "sha256-canon-v1"
-HASHED_FIELDS = ("name", "description", "inputSchema", "outputSchema", "annotations")
+ALGORITHM = "sha256-canon-v2"
+HASHED_FIELDS = ("name", "description", "inputSchema", "outputSchema", "annotations", "_meta")
 
 
 def _canonical_bytes(obj: Any) -> bytes:
@@ -59,10 +68,29 @@ def _sha256(data: bytes) -> str:
 
 
 def canonical_tool(tool: dict[str, Any]) -> dict[str, Any]:
-    """Reduce a tool object to the security-relevant fields we hash."""
+    """Reduce a tool object to the security-relevant fields we hash.
+
+    `_meta` is narrowed to `_meta.ui`, the MCP Apps declaration (2026-07-28).
+    Hashing all of `_meta` would fire on benign churn, since `_meta` is an open
+    extension namespace; hashing none of it lets a server repoint a tool at
+    different UI without changing its hash. Note the scope honestly: the tool's
+    `_meta.ui` carries only `resourceUri`. The UI resource's own `csp` and
+    `domain` live on the resource, which this script never sees, so a widened
+    CSP is NOT detected here. Reviewing and hashing the resource is a separate,
+    manual step (inspection-checklist.md Part B).
+    """
     if not isinstance(tool, dict):
         raise ValueError(f"tool entry is not an object: {tool!r}")
-    return {k: tool[k] for k in HASHED_FIELDS if k in tool}
+    out = {k: tool[k] for k in HASHED_FIELDS if k in tool}
+    meta = out.get("_meta")
+    if isinstance(meta, dict):
+        if "ui" in meta:
+            out["_meta"] = {"ui": meta["ui"]}
+        else:
+            del out["_meta"]
+    elif "_meta" in out:
+        del out["_meta"]
+    return out
 
 
 def extract_tools(payload: Any) -> list[dict[str, Any]]:
