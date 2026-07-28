@@ -6,6 +6,39 @@ All notable changes to this repo are documented here. Versions match the
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-07-28
+
+### Added
+- **secure-mcp-builder: AUTH-12, deprovisioning propagation.** New MUST for any server
+  holding per-user state. When a principal is removed at the identity provider,
+  everything the server holds for them must be torn down rather than left to expire:
+  stored refresh tokens and downstream credentials, live cross-call handles (`ST-2`),
+  and durable tasks still running under that identity (`AGT-5`). Closes a real gap in
+  this catalog's own advice: `auth-patterns.md` tells builders to store per-user refresh
+  tokens keyed to the user, and nothing said to delete them. Names the two traps that
+  make this look solved when it is not, IdP revocation typically blocking only new
+  authentication, and `AUTH-1`'s stateless local JWT validation keeping a revoked token
+  valid until `exp` because nothing calls the IdP per request. The 2026-07-28 stateless
+  core sharpens it further: with no session to drop, per-user residue is entirely the
+  server's to track. Matching ship-gate line, and a matching assess-side checklist item
+  in `mcp-security-review` Part D, which previously covered only the reverse direction
+  (killing the server's access to you, not clearing your deprovisioned users out of it).
+
+### Changed
+- **secure-mcp-builder: AGT-1 now says authorization scoping is not an injection
+  defense.** Per-user RBAC, CRUD restrictions, and pre-filtered views bound the blast
+  radius of a hijacked agent to what that user could already reach, which is worth
+  having, but an agent manipulated into acting entirely within its own permissions still
+  completes the lethal trifecta. The claim that scoping "handles" prompt injection is
+  common in managed-platform vendor material, so the control now names it and says how
+  to read it, since for a broadly-privileged user the bound is weak.
+- **secure-mcp-builder: LOG-3 gains retention and preservation.** It covered SIEM
+  shipping and trace IDs but said nothing about how long logs live or whether they can
+  be rewritten. Now requires an explicit retention period outlasting the realistic
+  detection window, an append-only or tamper-evident store (an audit trail a compromised
+  server can rewrite is not evidence), and preserving logs before any containment action
+  that could rotate or age them out.
+
 ## [0.6.0] - 2026-07-28
 
 ### Fixed
