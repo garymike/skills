@@ -24,7 +24,8 @@ Canonicalization (do not change without bumping ALGORITHM):
      and a v2 hash of the same unchanged tool set therefore differ. That
      difference alone is NOT a rug-pull signal; re-baseline once at v2, then
      compare v2 to v2. The emitted manifest names its algorithm and hashed
-     fields so the two are always distinguishable.
+     fields, so the two are distinguishable only when the recorded artifact
+     retains the algorithm id rather than a bare hash.
   2. Serialize with sorted keys (recursively), UTF-8, and no insignificant
      whitespace: json.dumps(obj, sort_keys=True, separators=(",", ":"),
      ensure_ascii=False). This is JSON-Canonicalization-style; for cross-language
