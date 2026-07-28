@@ -4,7 +4,7 @@ Snapshot as of July 2026. Verify currency at modelcontextprotocol.io before majo
 
 ## Current state
 
-- **Stable / build target: 2025-11-25.** Streamable HTTP with optional `Mcp-Session-Id`, initialize handshake, elicitation and sampling defined, OAuth 2.1 authorization spec with RFC 9728 + RFC 8707.
+- **Previous stable: 2025-11-25.** Streamable HTTP with optional `Mcp-Session-Id`, initialize handshake, elicitation and sampling defined, OAuth 2.1 authorization spec with RFC 9728 + RFC 8707. Still a valid fallback where SDK or client support for 2026-07-28 is not yet there; see Build rules.
 - **2026-07-28 (final, released July 28, 2026):** largest revision since launch. Stateless protocol core. Twelve-month deprecation policy applies to what it retires. The controls below are no longer forward-looking; build against them now.
 
 ## What 2026-07-28 changes (design for this now)

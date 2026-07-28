@@ -81,14 +81,14 @@ _Standard review · modes code · 2026-07-27 · checks not performed: 2_
 - **MCP spec version:** 2026-07-28
 - **Transport:** streamable-http
 - **Forward-compat notes:** Stateless core; no session-derived security decisions observed.
-- **Tasks Status:** not_declared
-- **Mcp Apps Status:** reviewed_unsafe
+- **Tasks status:** not_declared
+- **MCP Apps status:** reviewed_unsafe
 
 **Authentication & credential risk**
 - **Client auth:** oauth21_pkce
 - **Downstream auth:** Service identity with per-caller row-level grants enforced in the warehouse.
 - **Token passthrough:** No
-- **Handle Security:** not_applicable
+- **Handle security:** not_applicable
 - **Credential risk:** low
 - **Notes:** Client auth and downstream scoping are sound and are not the reason for this verdict. The server declares no cross-call handle surface: it exposes no Tasks extension and threads no opaque handles between calls, so handle_security is not_applicable rather than unverified.
 

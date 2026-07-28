@@ -75,6 +75,8 @@ LABELS = {
     "install_time_behavior": "Install-time behavior", "data_residency": "Data residency",
     "mcp_spec_version": "MCP spec version", "transport": "Transport",
     "forward_compat_notes": "Forward-compat notes",
+    "tasks_status": "Tasks status", "mcp_apps_status": "MCP Apps status",
+    "handle_security": "Handle security",
 }
 
 
