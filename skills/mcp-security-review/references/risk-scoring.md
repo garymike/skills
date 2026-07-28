@@ -52,9 +52,14 @@ Tasks scores through Capability / blast radius, not Auth strength, and carries n
 | Composite | Rating |
 |---|---|
 | ≤ 1.8 | LOW |
-| 1.9 - 2.9 | MODERATE |
-| 3.0 - 3.9 | HIGH |
+| above 1.8, below 3.0 | MODERATE |
+| 3.0 up to below 4.0 | HIGH |
 | ≥ 4.0 | CRITICAL |
+
+The bands are contiguous on purpose: every composite lands in exactly one. An earlier
+version read `1.9 - 2.9` and `3.0 - 3.9`, which left 1.81 to 1.89 and 2.91 to 2.99
+unclassifiable. That was not hypothetical, since a composite of 1.85 falls in the first
+gap. Do not restate the bands as bare ranges without checking that the edges still meet.
 
 ## Overrides (apply after arithmetic)
 
