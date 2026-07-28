@@ -25,6 +25,8 @@ Wire before first production use, proportional to tier:
 
 Any of: version bump, tool-definition hash change, scope/permission change request, publisher or ownership change, relevant CVE or incident (theirs or the class), composition change (a new server added that alters this one's trifecta math), or the tier's calendar cadence. Re-review scope is the diff plus composition, not necessarily the full checklist; a clean minor-version diff with unchanged hashes is a fast pass.
 
+**Hash algorithm migration (one time).** `hash_tool_definitions.py` moved from `sha256-canon-v1` to `sha256-canon-v2` when the 2026-07-28 spec added the MCP Apps `_meta.ui` declaration, which v1 did not hash. A v1 hash and a v2 hash of the same unmodified tool set therefore differ. That difference alone is not a rug-pull signal. Re-baseline each recorded server once at v2, note the re-baseline in its record, then compare v2 to v2 from there. The manifest names its own `algorithm` and `hashed_fields`, so check those before treating any mismatch as tampering.
+
 ## Suspension and offboarding
 
 - **Suspend** (reversible, fast): gateway block or credential disable while investigating a trigger. Practice this path; measure time-to-suspend.
