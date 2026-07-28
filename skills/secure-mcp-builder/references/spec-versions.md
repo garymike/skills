@@ -22,6 +22,6 @@ Snapshot as of July 2026. Verify currency at modelcontextprotocol.io before majo
 
 ## Build rules
 
-- New servers: build on 2025-11-25 with the official SDK, but keep all state out of sessions, all handles explicit/user-bound/expiring, and no reliance on Roots/Sampling/Logging. That makes the 2026 migration a transport update, not a redesign.
+- New servers: target 2026-07-28 with the official SDK now that it is final. If you must ship on 2025-11-25 first (SDK maturity, client support), keep all state out of sessions, all handles explicit/user-bound/expiring, and no reliance on Roots/Sampling/Logging, which makes the migration a transport update rather than a redesign.
 - Statelessness is a security posture, not just scalability: it eliminates protocol-level session hijack but moves the burden onto your handles. A predictable or unbound handle is the new hijack.
-- Pin the SDK version; track Tier 1 SDK releases during the validation window; migrate on the SDK, never by hand-rolling transport code.
+- Pin the SDK version; track Tier 1 SDK releases as they add 2026-07-28 support; migrate on the SDK, never by hand-rolling transport code.
