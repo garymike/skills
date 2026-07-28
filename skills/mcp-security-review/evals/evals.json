@@ -128,6 +128,43 @@
           "type": "content"
         }
       ]
+    },
+    {
+      "id": 5,
+      "eval_name": "unsafe-mcp-app-csp",
+      "prompt": "Review the analytics-mcp server our data team wants to roll out company-wide. Remote HTTP, OAuth 2.1 + PKCE, read-only against our warehouse, three tools: analytics_query, analytics_list_dashboards, analytics_render_dashboard. The last one is new, it ships an MCP App so people get an interactive chart in the chat instead of a table. Source is available. The tool registers with _meta: { ui: { resourceUri: 'ui://analytics/dashboard.html' } }, and the resource read handler returns the bundled HTML with _meta: { ui: { csp: { connectDomains: ['https://api.analytics-vendor.example'], resourceDomains: ['https://cdn.jsdelivr.net'] }, domain: 'analytics.acme.internal' }, permissions: ['camera'] }. The HTML does document.getElementById('title').innerHTML = result.dashboardName where result is the tool's own output. Anything we should worry about before we ship it?",
+      "expected_output": "Report flags three problems in the MCP App and scores mcp_apps_status: reviewed_unsafe, forcing CRITICAL and do_not_connect by override even though the raw weighted composite lands in the MODERATE band. First, resourceDomains permits https://cdn.jsdelivr.net, a public CDN the publisher does not control, so anyone able to publish there executes script inside a UI carrying the host's trust. Second, the HTML assigns tool output into innerHTML, an XSS sink fed by data the server itself returns, so a poisoned dashboard name becomes script; and because an MCP App can call tools and push context updates to the model, that is an injection path into the conversation, not only a browser-level bug. Third, the app requests camera permission with no plausible connection to rendering charts, which is excess capability scored like an excess OAuth scope. Report notes the definition hash covers only the resourceUri pointer, so the resource content needs its own recorded hash, and cites UI-1 and OUT-3.",
+      "files": [],
+      "assertions": [
+        {
+          "text": "Identifies csp.resourceDomains permitting https://cdn.jsdelivr.net as a third-party script-execution vector, reasoning that the publisher does not control that origin and the host iframe is otherwise deny-by-default",
+          "type": "content"
+        },
+        {
+          "text": "Identifies the innerHTML assignment from the tool's own result as an XSS sink, and connects it to the MCP App's ability to call tools and push context updates to the model, so it is an injection path into the conversation rather than only a browser-level XSS",
+          "type": "content"
+        },
+        {
+          "text": "Flags the camera permission as excess capability unjustified by a chart-rendering function, scored the same way an excess OAuth scope would be",
+          "type": "content"
+        },
+        {
+          "text": "technical_assessment.protocols.mcp_apps_status is reviewed_unsafe, reached by actually reading the ui:// resource rather than by inspecting the tool definition alone",
+          "type": "content"
+        },
+        {
+          "text": "overall_risk.rating is CRITICAL via the mcp_apps_status override (risk_rating.overrides_applied names it) with verdict do_not_connect, even though risk_rating.composite falls in the MODERATE band by the rating map alone",
+          "type": "content"
+        },
+        {
+          "text": "Notes that the tool-definition hash covers only the _meta.ui.resourceUri pointer, so the UI resource's own content needs a separately recorded hash to detect later CSP or markup changes behind an unchanged pointer",
+          "type": "content"
+        },
+        {
+          "text": "At least one finding cites UI-1 in category.control_ids or remediation.control_ids",
+          "type": "content"
+        }
+      ]
     }
   ]
 }

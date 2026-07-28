@@ -6,6 +6,66 @@ All notable changes to this repo are documented here. Versions match the
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-07-28
+
+### Fixed
+- **Tool-definition hashing missed the MCP Apps declaration.** MCP's 2026-07-28
+  spec declares a tool's interactive UI in `_meta.ui.resourceUri`, which
+  `sha256-canon-v1` did not hash, so a server could repoint an approved tool at
+  entirely different UI without changing its definition hash: a rug pull through
+  the control this project treats as its highest-value one.
+  `hash_tool_definitions.py` (both copies, which stay byte-identical) now hashes
+  `_meta.ui` and reports `sha256-canon-v2`. Only `_meta.ui` is hashed, never the
+  whole open `_meta` namespace, so benign metadata churn does not fire.
+  **Migration:** a v1 hash and a v2 hash of the same unchanged tool set differ;
+  that alone is not a rug-pull signal. Re-baseline once at v2, then compare v2 to
+  v2, and record the algorithm id alongside the hash (the `--set-hash-only` flag
+  prints a bare hash with no algorithm context, so a decision record holding only
+  that value cannot tell the two apart). Honest scope: the tool carries only the
+  `resourceUri` pointer, so a widened CSP on the UI resource is not detected by
+  the hash and needs the new manual review step.
+
+### Added
+- **mcp-security-review: coverage for the 2026-07-28 stateless spec.** Three
+  optional fields, all additive so recorded assessments stay valid unmodified:
+  `handle_security` on the auth block, `tasks_status` and `mcp_apps_status` on the
+  protocols block. Four checklist items, each beside its nearest existing sibling:
+  MCP Apps in Part B, routing-header hygiene and Tasks resource discipline in Part
+  C, stateless handle security in Part D. Two overrides force CRITICAL,
+  `mcp_apps_status: reviewed_unsafe` and `handle_security: verified_broken`, both
+  authorization or injection bypasses. `tasks_status` deliberately gets no
+  override: unbounded task creation is an availability problem, and forcing a
+  verdict on it would be crying wolf. New eval 5 (`unsafe-mcp-app-csp`) exercises
+  the MCP Apps override against a server whose every problem lives on the UI
+  resource rather than the tool definition, the exact failure the definition hash
+  cannot see.
+- **secure-mcp-builder: SEC-5, UI-1, and AGT-5.** `SEC-5` (MUST, remote HTTP)
+  keeps credentials and PII out of the `Mcp-Method` and `Mcp-Name` routing headers
+  every proxy and log captures, and requires rejecting header/body mismatches.
+  `UI-1` opens a new control family for MCP Apps: static reviewed UI artifacts, no
+  HTML built from runtime data, CSP limited to origins you control, minimal
+  permissions. `AGT-5` bounds the Tasks extension, since a task outlives the
+  request `INP-6` bounds, and the spec makes `tasks/cancel` cooperative so
+  status-only cancellation is compliant and still strands work. Stateless handles
+  get no new control: `ST-1` and `ST-2` already cover them. `SUP-6` now states that
+  the manifest covers `_meta.ui` but that each UI resource needs its own hash.
+- The repo's first mechanical test (`test_hash_tool_definitions.py`), stdlib-only
+  to match the script it covers.
+
+### Changed
+- **secure-mcp-builder: the recommended build target is now 2026-07-28.**
+  `spec-versions.md` previously labelled 2025-11-25 as the build target while the
+  2026 revision was still a release candidate. Now that it is final, new servers
+  should target it, with 2025-11-25 kept as a documented fallback where SDK or
+  client support is not yet there. This changes what builders are told to build
+  against, so it is called out rather than folded into the currency pass.
+- **mcp-security-review: report labels for the three new fields.**
+  `render_report.py` gained explicit `LABELS` entries for `tasks_status`,
+  `mcp_apps_status`, and `handle_security`, so they render as "Tasks status",
+  "MCP Apps status", and "Handle security" rather than falling through to
+  title-casing, which produced "Mcp Apps Status" and mis-cased the acronym. All
+  four reference outputs re-rendered.
+
 ## [0.5.1] - 2026-07-26
 
 ### Fixed

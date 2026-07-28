@@ -1,0 +1,372 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Security Assessment — analytics-mcp</title><style>
+:root { --paper:#e9e3d6; --panel:#fdfbf7; --ink:#2c2a25; --muted:#6f685c;
+        --line:#e4ded2; --accent:#766152; --accent-soft:#efeae0; }
+* { box-sizing:border-box; }
+body { font:16px/1.62 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       color:var(--ink); background:var(--paper); margin:0; padding:30px 16px; }
+.wrap { max-width:840px; margin:0 auto; }
+
+.cover, .block { background:var(--panel); border:1px solid var(--line); border-radius:10px;
+                 padding:24px 28px; margin:0 0 16px; }
+.exec { background:#dce3ed; border:2px solid #9bb0cb; }
+.recs { background:#e3e9d8; border:2px solid #a7b988; }
+h1 { font-size:27px; margin:0 0 2px; letter-spacing:-.01em; }
+h2 { font-size:13px; text-transform:uppercase; letter-spacing:.09em; color:var(--muted);
+     margin:0 0 14px; display:flex; align-items:center; gap:8px; }
+h2::before { content:""; width:9px; height:9px; border-radius:2px; background:var(--accent); }
+h3 { font-size:15.5px; margin:0; }
+p { margin:0 0 12px; } p:last-child { margin-bottom:0; }
+a { color:var(--accent); text-decoration:none; }
+small, .muted { color:var(--muted); }
+code, pre, .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.eyebrow { text-transform:uppercase; letter-spacing:.12em; font-size:11.5px; color:var(--muted); margin:0 0 6px; }
+.sub { color:var(--muted); font-size:13.5px; margin:2px 0 0; }
+.source { display:inline-block; margin-top:7px; font-size:13px; color:var(--accent);
+          font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; word-break:break-all; }
+.prov { margin-top:10px; font-size:12.5px; line-height:1.7; }
+.prov-label { display:inline-block; color:#fff; font-size:10px; font-weight:700; text-transform:uppercase;
+              letter-spacing:.05em; padding:2px 9px; border-radius:20px; margin-right:9px; vertical-align:middle; }
+.prov-signals { color:var(--muted); vertical-align:middle; }
+.subhead { color:var(--muted); font-size:12px; margin:16px 0 5px; text-transform:uppercase; letter-spacing:.06em; }
+
+.cover-top { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; flex-wrap:wrap; }
+.cover-id { flex:1 1 340px; min-width:0; }
+.cover-outcome { flex:0 0 auto; display:flex; flex-direction:column; gap:8px; align-items:flex-end; }
+.orow { display:flex; align-items:center; gap:10px; }
+.olabel { font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); }
+.pill { display:inline-block; color:#fff; font-weight:700; letter-spacing:.02em; padding:6px 12px;
+        border-radius:6px; font-size:12.5px; min-width:130px; text-align:center; }
+.profile { display:grid; grid-template-columns:repeat(auto-fit,minmax(195px,1fr)); gap:6px 30px;
+           margin:18px 0 0; padding:15px 0 0; border-top:1px solid var(--line); font-size:13.5px; }
+.profile .k { color:var(--muted); }
+.profile .v { font-weight:600; }
+
+.chips { margin:0 0 14px; }
+.chip { display:inline-flex; align-items:center; font-size:12px; font-weight:600; padding:3px 12px 3px 4px;
+        border-radius:20px; margin:0 7px 7px 0; border:1px solid var(--line); color:var(--muted); background:#fff; }
+.chip.n0 { opacity:.5; }
+.chip b { display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto;
+          width:18px; height:18px; border-radius:50%; color:#fff; font-size:11px; margin-right:6px; }
+.topf-list { list-style:none; margin:0 0 6px; padding:0; }
+.topf-list li { display:flex; justify-content:space-between; align-items:baseline; gap:14px; padding:2px 0; }
+.topf-ref { white-space:nowrap; }
+
+.anchor { font-size:12.5px; color:var(--muted); border-top:1px solid var(--line); margin-top:14px; padding-top:10px; }
+.anchor span { display:inline-block; margin-right:16px; }
+.anchor code { color:var(--ink); }
+
+.rec { display:flex; align-items:center; gap:11px; font-size:15px; }
+.rec + .rec { margin-top:12px; padding-top:12px; border-top:1px solid #d2dcc0; }
+.rec .n { flex:0 0 auto; width:24px; height:24px; border-radius:50%;
+          background:var(--accent); color:#fff; font-size:13px; font-weight:700;
+          display:flex; align-items:center; justify-content:center; }
+.rec .rectext { flex:1; }
+.rec .refs { color:var(--muted); font-size:12.5px; }
+
+.finding { background:#fbf9f4; border:1px solid var(--line); border-left-width:5px; border-radius:8px;
+           padding:16px 18px; margin:0 0 14px; }
+.finding:last-child { margin-bottom:0; }
+.finding-head { display:flex; align-items:center; justify-content:space-between; gap:9px; flex-wrap:wrap; margin-bottom:4px; }
+.finding-tags { display:flex; gap:7px; flex-wrap:wrap; }
+.sev { color:#fff; font-weight:700; font-size:11px; letter-spacing:.05em; padding:3px 8px; border-radius:5px; }
+.fid { font-weight:700; color:var(--accent); font-size:13px; letter-spacing:.03em; text-transform:uppercase; }
+.finding-title { font-size:15.5px; margin:0 0 12px; }
+.finding-div { border:none; border-top:1px solid var(--line); margin:0 0 12px; }
+.badge { font-size:11px; padding:2px 8px; border-radius:5px; border:1px solid var(--line);
+         color:var(--muted); background:#fff; }
+.badge.confirmed { border-color:#5f7150; color:#5f7150; }
+.badge.observed { border-color:#97793d; color:#97793d; }
+.cvss { font-size:11px; font-weight:600; color:var(--ink); background:var(--accent-soft); padding:2px 8px; border-radius:5px; }
+dl.kv { display:grid; grid-template-columns:100px 1fr; gap:7px 14px; margin:0; font-size:14.5px; }
+dl.kv dt { color:var(--muted); font-size:13px; }
+dl.kv dd { margin:0; }
+dl.kv2 { display:grid; grid-template-columns:140px 1fr; gap:7px 14px; margin:0; font-size:14px; }
+dl.kv2 dt { color:var(--muted); font-size:13px; }
+dl.kv2 dd { margin:0; }
+.subsection { margin:16px 0 0; padding:16px 0 0; border-top:1px solid var(--line); }
+.subsection:first-child { margin-top:0; padding-top:0; border-top:none; }
+.subsection .subhead { margin:0 0 8px; }
+.subhead .dot { display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:7px; vertical-align:middle; }
+.caps-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px 28px; }
+.cap { margin:0; }
+.cap-head { display:flex; align-items:center; gap:9px; margin-bottom:2px; }
+.cap-head code { font-weight:600; font-size:14px; }
+.cap-class { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+             background:#615a4e; color:#fff; border-radius:4px; padding:2px 8px; }
+.cap-class.destructive { background:#7a4a3e; }
+.cap-fn { font-size:14px; }
+.cap-anno { font-size:12.5px; color:var(--muted); margin-top:2px; }
+pre.evidence { background:#efeae0; color:#403a30; border:1px solid #e0d9cb; padding:10px 12px;
+               border-radius:6px; font-size:12.5px; overflow-x:auto; white-space:pre-wrap; margin:0; }
+.controls code { background:var(--accent-soft); color:#5a4a37; padding:1px 6px; border-radius:4px; font-size:12px; margin-right:4px; }
+
+table { border-collapse:collapse; width:100%; font-size:14px; margin:4px 0; }
+th, td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+tr:last-child td, tr:last-child th { border-bottom:none; }
+.risk-table { table-layout:fixed; }
+.risk-table th, .risk-table td { width:50%; }
+.composite-row td, .composite-row th { background:#efe9db; border-top:1px solid #d8d0bf; }
+.composite-row th { color:var(--ink); font-weight:700; text-transform:none; font-size:14px; letter-spacing:0; }
+.composite-row td { font-size:15px; }
+
+.disclaimer { font-size:13px; color:#5c564b; background:#f4f0e7; border:1px solid var(--line); border-radius:8px; padding:14px 16px; }
+details.appendix summary { cursor:pointer; color:var(--muted); font-size:13px; font-weight:600; user-select:none; }
+details.appendix pre { background:#f6f3ec; border:1px solid var(--line); border-radius:8px; padding:14px;
+                       font-size:12px; overflow-x:auto; margin-top:12px; }
+.footer { color:var(--muted); font-size:12px; text-align:center; margin:4px 0 0; }
+
+@media print {
+  body { background:#fff; padding:0; }
+  .cover, .block { border:1px solid #ddd; }
+  .finding, table, .disclaimer, .rec, .exec, .recs { break-inside:avoid; }
+  h2 { break-after:avoid; }
+  details.appendix pre { white-space:pre-wrap; overflow-wrap:anywhere; overflow-x:visible; }
+  details.appendix summary { list-style:none; }
+  details.appendix summary::-webkit-details-marker { display:none; }
+  * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+}
+</style></head><body><div class="wrap"><section class="cover"><div class="cover-top"><div class="cover-id"><p class="eyebrow">MCP Security Assessment</p><h1>analytics-mcp</h1><p class="sub">v1.4.0 / https://mcp.analytics.acme.internal</p></div><div class="cover-outcome"><div class="orow"><span class="olabel">Recommendation</span><span class="pill" style="background:#6e3b34">DO NOT CONNECT</span></div><div class="orow"><span class="olabel">Overall risk</span><span class="pill" style="background:#6e3b34">CRITICAL · 2.4</span></div></div></div><div class="profile"><div><span class="k">Publisher:</span> <span class="v">first-party (Data Platform)</span></div><div><span class="k">Hosting:</span> <span class="v">remote self</span></div><div><span class="k">Assessor:</span> <span class="v">mcp-security-review</span></div><div><span class="k">Review modes:</span> <span class="v">code</span></div><div><span class="k">Assessment depth:</span> <span class="v">Standard review</span></div><div><span class="k">Assessed:</span> <span class="v">2026-07-27</span></div></div></section><section class="block exec"><h2>Executive summary</h2><div class="chips"><span class="chip"><b style="background:#6e3b34">1</b>Critical</span><span class="chip"><b style="background:#9c5a44">1</b>High</span><span class="chip"><b style="background:#97793d">1</b>Moderate</span><span class="chip n0"><b style="background:#5f7150">0</b>Low</span><span class="chip n0"><b style="background:#8a8075">0</b>Info</span></div><p>analytics-mcp is a sound read-only warehouse connector with one unsafe addition. Its new MCP App renders in the conversation under the host&#x27;s own trust, yet it admits scripts from a public CDN the team does not control, writes the server&#x27;s own tool output into innerHTML, and asks for camera access it has no use for. Any one of those turns an interactive chart into script execution and a path to push attacker-chosen context at the model. The rest of the server is fine, which is exactly why the UI needs fixing rather than the connector being abandoned.</p><p class="subhead">Top findings</p><ul class="topf-list"><li><span class="topf-main"><b style="color:#6e3b34">CRITICAL</b> MCP App CSP admits a public CDN, permitting third-party script execution in the UI</span><span class="topf-ref muted">(Finding-01)</span></li><li><span class="topf-main"><b style="color:#9c5a44">HIGH</b> MCP App writes tool output into innerHTML</span><span class="topf-ref muted">(Finding-02)</span></li></ul><p class="sub" style="margin-top:12px"><b>Scope:</b> Review analytics-mcp before a company-wide rollout, with attention to the new MCP App shipped by analytics_render_dashboard.</p><div class="anchor"><span>Source SHA <code>3d9f1a7c5e2b</code></span><span>Definition hash <code>sha256:placeholder</code></span><span>Checks not performed: <code>2</code></span></div></section><section class="block recs"><h2>Recommendations</h2><div class="rec"><span class="n">1</span><span class="rectext">Bundle the chart library into the UI and empty csp.resourceDomains, so the app executes only script the team ships and reviews. <span class="refs">(findings Finding-01 · <code>UI-1</code>)</span></span></div><div class="rec"><span class="n">2</span><span class="rectext">Replace the innerHTML assignment with textContent, and keep UI markup independent of runtime data. <span class="refs">(findings Finding-02 · <code>UI-1</code> <code>OUT-3</code>)</span></span></div><div class="rec"><span class="n">3</span><span class="rectext">Drop the camera permission from the UI resource. <span class="refs">(findings Finding-03 · <code>UI-1</code> <code>AGT-4</code>)</span></span></div><div class="rec"><span class="n">4</span><span class="rectext">Record a hash of the ui:// resource content alongside the tool-definition hash, and re-check it on every version bump. The definition hash covers only the resourceUri pointer, so CSP and markup can change beneath an unchanged pointer. <span class="refs">(findings Finding-01, Finding-02 · <code>SUP-6</code>)</span></span></div></section><section class="block "><h2>Scope &amp; methodology</h2><p><b>Scope.</b> Review analytics-mcp before a company-wide rollout, with attention to the new MCP App shipped by analytics_render_dashboard.<br><b>Assessment depth.</b> Standard review — full inspection across provenance, tool surface, code/runtime, and auth/data-flow.<br><b>Review modes.</b> code (code = source review, live = remote endpoint, sandbox = behavioral run).<br><b>Not performed.</b> part-e-runtime, sandbox — treated as unknowns that raise risk, never lower it.</p></section><section class="block "><h2>Findings</h2><div class="finding" style="border-left-color:#6e3b34"><div class="finding-head"><span class="fid">Finding-01</span><span class="finding-tags"><span class="sev" style="background:#6e3b34">CRITICAL</span><span class="badge reasoned" title="Identified by static / definition review; not exploited.">reasoned</span></span></div><h3 class="finding-title">MCP App CSP admits a public CDN, permitting third-party script execution in the UI</h3><hr class="finding-div"><dl class="kv"><dt>Category</dt><dd>Supply Chain / Untrusted Content · Part B · <span class="controls"><code>UI-1</code></span></dd><dt>Affected</dt><dd>ui://analytics/dashboard.html (resource _meta.ui.csp)</dd><dt>Description</dt><dd>The UI resource declares csp.resourceDomains of https://cdn.jsdelivr.net. resourceDomains governs scripts, stylesheets, images, and fonts, and the host renders MCP Apps in a deny-by-default iframe, so this entry is the specific thing permitting third-party script execution. jsdelivr is a public CDN serving arbitrary published packages; the Data Platform team does not control what it serves.</dd><dt>Impact</dt><dd>Anyone able to publish or tamper with content at that origin executes script inside a UI the user sees as part of the assistant. Because an MCP App can call tools and push context updates to the model, that script is not confined to browser mischief: it can drive tool calls the user believes they authorized and inject attacker-chosen text into the conversation, wearing the host&#x27;s trust the whole time.</dd><dt>Likelihood</dt><dd>Moderate: it needs a compromised or malicious package at the CDN origin rather than a direct attack on this server, but that is a well-worn supply-chain path and nothing in this configuration would detect it.</dd><dt>Evidence</dt><dd><pre class="evidence">resource read handler for ui://analytics/dashboard.html — _meta: { ui: { csp: { connectDomains: [&quot;https://api.analytics-vendor.example&quot;], resourceDomains: [&quot;https://cdn.jsdelivr.net&quot;] }, domain: &quot;analytics.acme.internal&quot; } }</pre></dd><dt>Remediation</dt><dd>Bundle the chart library into the HTML (vite-plugin-singlefile or equivalent) and drop resourceDomains to empty, which is the configuration the extension is designed around. If an external origin is genuinely unavoidable, it must be one the team controls and pins by digest, never a shared public CDN. <span class="controls"><code>UI-1</code><code>SUP-1</code></span></dd><dt>Status</dt><dd>open</dd></dl></div><div class="finding" style="border-left-color:#9c5a44"><div class="finding-head"><span class="fid">Finding-02</span><span class="finding-tags"><span class="sev" style="background:#9c5a44">HIGH</span><span class="badge reasoned" title="Identified by static / definition review; not exploited.">reasoned</span></span></div><h3 class="finding-title">MCP App writes tool output into innerHTML</h3><hr class="finding-div"><dl class="kv"><dt>Category</dt><dd>Injection · Part B · <span class="controls"><code>UI-1</code><code>OUT-3</code></span></dd><dt>Affected</dt><dd>ui://analytics/dashboard.html (rendering code)</dd><dt>Description</dt><dd>The UI assigns the tool&#x27;s own result into innerHTML: document.getElementById(&#x27;title&#x27;).innerHTML = result.dashboardName. Dashboard names come from the warehouse, so any user who can name a dashboard controls markup rendered inside the app.</dd><dt>Impact</dt><dd>A dashboard named with a script payload executes when the app renders, in the same trusted UI context as F-01 and with the same reach into tool calls and model context. This is the case UI-1 and OUT-3 both exist to prevent: UI markup built from runtime data rather than shipped as a reviewed static artifact.</dd><dt>Likelihood</dt><dd>High where dashboard names are user-editable, which is the normal case for a warehouse analytics tool.</dd><dt>Evidence</dt><dd><pre class="evidence">ui://analytics/dashboard.html — document.getElementById(&#x27;title&#x27;).innerHTML = result.dashboardName;</pre></dd><dt>Remediation</dt><dd>Use textContent rather than innerHTML for any value derived from tool output or warehouse data. Keep the UI a static reviewed artifact whose markup does not vary with runtime data. <span class="controls"><code>UI-1</code><code>OUT-3</code></span></dd><dt>Status</dt><dd>open</dd></dl></div><div class="finding" style="border-left-color:#97793d"><div class="finding-head"><span class="fid">Finding-03</span><span class="finding-tags"><span class="sev" style="background:#97793d">MODERATE</span><span class="badge reasoned" title="Identified by static / definition review; not exploited.">reasoned</span></span></div><h3 class="finding-title">MCP App requests camera permission unrelated to its function</h3><hr class="finding-div"><dl class="kv"><dt>Category</dt><dd>Excessive Agency · Part B · <span class="controls"><code>UI-1</code><code>AGT-4</code></span></dd><dt>Affected</dt><dd>ui://analytics/dashboard.html (resource _meta.ui permissions)</dd><dt>Description</dt><dd>The UI resource requests camera permission. Rendering a chart from data the tool already returned needs no camera access, and nothing else in the tool&#x27;s description suggests a capture feature.</dd><dt>Impact</dt><dd>Excess capability in a UI that already has two paths to script execution. If either is exploited, the granted permission is available to the attacker; and a permission prompt arriving from a trusted assistant surface is one users are unusually likely to accept.</dd><dt>Remediation</dt><dd>Remove the camera permission. Request only capabilities the tool&#x27;s stated function requires, and justify each in the tool description. <span class="controls"><code>UI-1</code><code>AGT-4</code></span></dd><dt>Status</dt><dd>open</dd></dl></div></section><section class="block "><h2>Technical assessment</h2><div class="subsection"><p class="subhead"><span class="dot" style="background:#766152"></span>Profile</p><dl class="kv2"><dt>Purpose</dt><dd>Query the analytics warehouse and render dashboards for agents, company-wide.</dd><dt>Publisher</dt><dd>first-party (Data Platform)</dd><dt>Maintenance</dt><dd>Active internal repo, fortnightly releases, 4 maintainers.</dd><dt>License</dt><dd>internal</dd></dl></div><div class="subsection"><p class="subhead"><span class="dot" style="background:#5f7150"></span>Capabilities</p><div class="caps-grid"><div class="cap"><div class="cap-head"><code>analytics_query</code><span class="cap-class read">read</span></div><div class="cap-fn">Run a read-only query against the warehouse.</div></div><div class="cap"><div class="cap-head"><code>analytics_list_dashboards</code><span class="cap-class read">read</span></div><div class="cap-fn">List dashboards visible to the caller.</div></div><div class="cap"><div class="cap-head"><code>analytics_render_dashboard</code><span class="cap-class read">read</span></div><div class="cap-fn">Render a dashboard as an interactive MCP App.</div></div></div></div><div class="subsection"><p class="subhead"><span class="dot" style="background:#8a8075"></span>Permissions</p><ul style="margin:0;padding-left:20px"><li>warehouse.read (scoped to the caller&#x27;s own row-level grants)</li></ul></div><div class="subsection"><p class="subhead"><span class="dot" style="background:#766152"></span>Hosting</p><dl class="kv2"><dt>Hosting model</dt><dd>remote self</dd><dt>Install methods</dt><dd>Internal service catalog; clients connect to https://mcp.analytics.acme.internal</dd><dt>Install-time behavior</dt><dd>No install; remote HTTP endpoint.</dd><dt>Data residency</dt><dd>Company-owned infrastructure, same region as the warehouse.</dd></dl></div><div class="subsection"><p class="subhead"><span class="dot" style="background:#97793d"></span>Protocols</p><dl class="kv2"><dt>MCP spec version</dt><dd>2026-07-28</dd><dt>Transport</dt><dd>streamable-http</dd><dt>Forward-compat notes</dt><dd>Stateless core; no session-derived security decisions observed.</dd><dt>Tasks status</dt><dd>not_declared</dd><dt>MCP Apps status</dt><dd>reviewed_unsafe</dd></dl></div><div class="subsection"><p class="subhead"><span class="dot" style="background:#9c5a44"></span>Authentication &amp; credential risk</p><dl class="kv2"><dt>Client auth</dt><dd>oauth21_pkce</dd><dt>Downstream auth</dt><dd>Service identity with per-caller row-level grants enforced in the warehouse.</dd><dt>Token passthrough</dt><dd>No</dd><dt>Handle security</dt><dd>not_applicable</dd><dt>Credential risk</dt><dd>low</dd><dt>Notes</dt><dd>Client auth and downstream scoping are sound and are not the reason for this verdict. The server declares no cross-call handle surface: it exposes no Tasks extension and threads no opaque handles between calls, so handle_security is not_applicable rather than unverified.</dd></dl></div><div class="subsection"><p class="subhead"><span class="dot" style="background:#97793d"></span>Composition</p><p>Warehouse data is private and the MCP App can reach an external origin, but the server exposes no send or write capability of its own, so the third leg is absent as reviewed. Note that F-01 and F-02 both give an attacker a path to push context at the model, which is adjacent to the trifecta&#x27;s untrusted-content leg even though the server does not complete it.</p><p><b>Blast radius.</b> Script execution inside a trusted assistant UI for every user who renders a dashboard, with the ability to drive the server&#x27;s read tools and inject context into their conversation.</p></div></section><section class="block "><h2>Risk rating</h2><table class="risk-table"><thead><tr><th>Factor</th><th>Score (1–5)</th></tr></thead><tbody><tr><td>Provenance</td><td>3</td></tr><tr><td>Capability</td><td>4</td></tr><tr><td>Permissions</td><td>2</td></tr><tr><td>Hosting Exposure</td><td>2</td></tr><tr><td>Auth Strength</td><td>1</td></tr><tr><td>Credential Storage</td><td>2</td></tr><tr><td>Install Vector</td><td>1</td></tr><tr><td>Code Hygiene</td><td>3</td></tr><tr class="composite-row"><th>Composite</th><td><b>2.4</b></td></tr></tbody></table><p class="sub">Overrides: mcp_apps_status: reviewed_unsafe -&gt; CRITICAL, recommendation do_not_connect</p></section><section class="block "><h2>Limitations &amp; disclaimer</h2><div class="disclaimer">Point-in-time assessment (2026-07-27) against the reviewed commit. Static and source review only; the UI was read as shipped, not rendered and exercised in a host. This report is not a warranty.<br><br>All three findings are reasoned from source: the CSP and permissions were read from the resource read handler and the sink from the shipped HTML, none exploited. Rendering the app in a real host with a poisoned dashboard name would upgrade F-02 to confirmed.<br><br>Checks not performed (coverage gaps): part-e-runtime, sandbox.</div></section><section class="block"><h2>Appendix</h2><details class="appendix"><summary>Machine-readable assessment (assessment.json)</summary><pre>{
+  &quot;schema_version&quot;: 1,
+  &quot;meta&quot;: {
+    &quot;server_name&quot;: &quot;analytics-mcp&quot;,
+    &quot;version_or_endpoint&quot;: &quot;v1.4.0 / https://mcp.analytics.acme.internal&quot;,
+    &quot;publisher&quot;: &quot;first-party (Data Platform)&quot;,
+    &quot;assessed_date&quot;: &quot;2026-07-27&quot;,
+    &quot;assessor&quot;: &quot;mcp-security-review&quot;,
+    &quot;tier&quot;: 2,
+    &quot;review_modes&quot;: [
+      &quot;code&quot;
+    ],
+    &quot;source_commit_sha&quot;: &quot;3d9f1a7c5e2b8046af13c9d5e7b204a68f1c3d95&quot;,
+    &quot;definition_hash_sha256&quot;: &quot;sha256:placeholder-recompute-with-hash_tool_definitions-v2&quot;,
+    &quot;scope_statement&quot;: &quot;Review analytics-mcp before a company-wide rollout, with attention to the new MCP App shipped by analytics_render_dashboard.&quot;,
+    &quot;checks_not_performed&quot;: [
+      &quot;part-e-runtime&quot;,
+      &quot;sandbox&quot;
+    ]
+  },
+  &quot;verdict&quot;: &quot;do_not_connect&quot;,
+  &quot;overall_risk&quot;: {
+    &quot;rating&quot;: &quot;critical&quot;,
+    &quot;composite&quot;: 2.4
+  },
+  &quot;executive_summary&quot;: {
+    &quot;posture&quot;: &quot;analytics-mcp is a sound read-only warehouse connector with one unsafe addition. Its new MCP App renders in the conversation under the host&#x27;s own trust, yet it admits scripts from a public CDN the team does not control, writes the server&#x27;s own tool output into innerHTML, and asks for camera access it has no use for. Any one of those turns an interactive chart into script execution and a path to push attacker-chosen context at the model. The rest of the server is fine, which is exactly why the UI needs fixing rather than the connector being abandoned.&quot;,
+    &quot;top_finding_ids&quot;: [
+      &quot;F-01&quot;,
+      &quot;F-02&quot;
+    ]
+  },
+  &quot;findings&quot;: [
+    {
+      &quot;id&quot;: &quot;F-01&quot;,
+      &quot;title&quot;: &quot;MCP App CSP admits a public CDN, permitting third-party script execution in the UI&quot;,
+      &quot;severity&quot;: &quot;critical&quot;,
+      &quot;category&quot;: {
+        &quot;owasp_mcp_top10&quot;: &quot;Supply Chain / Untrusted Content&quot;,
+        &quot;review_part&quot;: &quot;B&quot;,
+        &quot;control_ids&quot;: [
+          &quot;UI-1&quot;
+        ]
+      },
+      &quot;affected_component&quot;: &quot;ui://analytics/dashboard.html (resource _meta.ui.csp)&quot;,
+      &quot;verification&quot;: &quot;reasoned&quot;,
+      &quot;status&quot;: &quot;open&quot;,
+      &quot;description&quot;: &quot;The UI resource declares csp.resourceDomains of https://cdn.jsdelivr.net. resourceDomains governs scripts, stylesheets, images, and fonts, and the host renders MCP Apps in a deny-by-default iframe, so this entry is the specific thing permitting third-party script execution. jsdelivr is a public CDN serving arbitrary published packages; the Data Platform team does not control what it serves.&quot;,
+      &quot;impact&quot;: &quot;Anyone able to publish or tamper with content at that origin executes script inside a UI the user sees as part of the assistant. Because an MCP App can call tools and push context updates to the model, that script is not confined to browser mischief: it can drive tool calls the user believes they authorized and inject attacker-chosen text into the conversation, wearing the host&#x27;s trust the whole time.&quot;,
+      &quot;likelihood&quot;: &quot;Moderate: it needs a compromised or malicious package at the CDN origin rather than a direct attack on this server, but that is a well-worn supply-chain path and nothing in this configuration would detect it.&quot;,
+      &quot;evidence&quot;: {
+        &quot;location&quot;: &quot;resource read handler for ui://analytics/dashboard.html&quot;,
+        &quot;detail&quot;: &quot;_meta: { ui: { csp: { connectDomains: [\&quot;https://api.analytics-vendor.example\&quot;], resourceDomains: [\&quot;https://cdn.jsdelivr.net\&quot;] }, domain: \&quot;analytics.acme.internal\&quot; } }&quot;,
+        &quot;secret_masked&quot;: false
+      },
+      &quot;remediation&quot;: {
+        &quot;summary&quot;: &quot;Bundle the chart library into the HTML (vite-plugin-singlefile or equivalent) and drop resourceDomains to empty, which is the configuration the extension is designed around. If an external origin is genuinely unavoidable, it must be one the team controls and pins by digest, never a shared public CDN.&quot;,
+        &quot;control_ids&quot;: [
+          &quot;UI-1&quot;,
+          &quot;SUP-1&quot;
+        ]
+      }
+    },
+    {
+      &quot;id&quot;: &quot;F-02&quot;,
+      &quot;title&quot;: &quot;MCP App writes tool output into innerHTML&quot;,
+      &quot;severity&quot;: &quot;high&quot;,
+      &quot;category&quot;: {
+        &quot;owasp_mcp_top10&quot;: &quot;Injection&quot;,
+        &quot;review_part&quot;: &quot;B&quot;,
+        &quot;control_ids&quot;: [
+          &quot;UI-1&quot;,
+          &quot;OUT-3&quot;
+        ]
+      },
+      &quot;affected_component&quot;: &quot;ui://analytics/dashboard.html (rendering code)&quot;,
+      &quot;verification&quot;: &quot;reasoned&quot;,
+      &quot;status&quot;: &quot;open&quot;,
+      &quot;description&quot;: &quot;The UI assigns the tool&#x27;s own result into innerHTML: document.getElementById(&#x27;title&#x27;).innerHTML = result.dashboardName. Dashboard names come from the warehouse, so any user who can name a dashboard controls markup rendered inside the app.&quot;,
+      &quot;impact&quot;: &quot;A dashboard named with a script payload executes when the app renders, in the same trusted UI context as F-01 and with the same reach into tool calls and model context. This is the case UI-1 and OUT-3 both exist to prevent: UI markup built from runtime data rather than shipped as a reviewed static artifact.&quot;,
+      &quot;likelihood&quot;: &quot;High where dashboard names are user-editable, which is the normal case for a warehouse analytics tool.&quot;,
+      &quot;evidence&quot;: {
+        &quot;location&quot;: &quot;ui://analytics/dashboard.html&quot;,
+        &quot;detail&quot;: &quot;document.getElementById(&#x27;title&#x27;).innerHTML = result.dashboardName;&quot;,
+        &quot;secret_masked&quot;: false
+      },
+      &quot;remediation&quot;: {
+        &quot;summary&quot;: &quot;Use textContent rather than innerHTML for any value derived from tool output or warehouse data. Keep the UI a static reviewed artifact whose markup does not vary with runtime data.&quot;,
+        &quot;control_ids&quot;: [
+          &quot;UI-1&quot;,
+          &quot;OUT-3&quot;
+        ]
+      }
+    },
+    {
+      &quot;id&quot;: &quot;F-03&quot;,
+      &quot;title&quot;: &quot;MCP App requests camera permission unrelated to its function&quot;,
+      &quot;severity&quot;: &quot;moderate&quot;,
+      &quot;category&quot;: {
+        &quot;owasp_mcp_top10&quot;: &quot;Excessive Agency&quot;,
+        &quot;review_part&quot;: &quot;B&quot;,
+        &quot;control_ids&quot;: [
+          &quot;UI-1&quot;,
+          &quot;AGT-4&quot;
+        ]
+      },
+      &quot;affected_component&quot;: &quot;ui://analytics/dashboard.html (resource _meta.ui permissions)&quot;,
+      &quot;verification&quot;: &quot;reasoned&quot;,
+      &quot;status&quot;: &quot;open&quot;,
+      &quot;description&quot;: &quot;The UI resource requests camera permission. Rendering a chart from data the tool already returned needs no camera access, and nothing else in the tool&#x27;s description suggests a capture feature.&quot;,
+      &quot;impact&quot;: &quot;Excess capability in a UI that already has two paths to script execution. If either is exploited, the granted permission is available to the attacker; and a permission prompt arriving from a trusted assistant surface is one users are unusually likely to accept.&quot;,
+      &quot;remediation&quot;: {
+        &quot;summary&quot;: &quot;Remove the camera permission. Request only capabilities the tool&#x27;s stated function requires, and justify each in the tool description.&quot;,
+        &quot;control_ids&quot;: [
+          &quot;UI-1&quot;,
+          &quot;AGT-4&quot;
+        ]
+      }
+    }
+  ],
+  &quot;technical_assessment&quot;: {
+    &quot;profile&quot;: {
+      &quot;purpose&quot;: &quot;Query the analytics warehouse and render dashboards for agents, company-wide.&quot;,
+      &quot;creator_publisher&quot;: &quot;first-party (Data Platform)&quot;,
+      &quot;maintenance_signals&quot;: &quot;Active internal repo, fortnightly releases, 4 maintainers.&quot;,
+      &quot;license&quot;: &quot;internal&quot;
+    },
+    &quot;capabilities&quot;: [
+      {
+        &quot;name&quot;: &quot;analytics_query&quot;,
+        &quot;function&quot;: &quot;Run a read-only query against the warehouse.&quot;,
+        &quot;class&quot;: &quot;read&quot;
+      },
+      {
+        &quot;name&quot;: &quot;analytics_list_dashboards&quot;,
+        &quot;function&quot;: &quot;List dashboards visible to the caller.&quot;,
+        &quot;class&quot;: &quot;read&quot;
+      },
+      {
+        &quot;name&quot;: &quot;analytics_render_dashboard&quot;,
+        &quot;function&quot;: &quot;Render a dashboard as an interactive MCP App.&quot;,
+        &quot;class&quot;: &quot;read&quot;
+      }
+    ],
+    &quot;permissions&quot;: [
+      &quot;warehouse.read (scoped to the caller&#x27;s own row-level grants)&quot;
+    ],
+    &quot;hosting&quot;: {
+      &quot;hosting_model&quot;: &quot;remote_self&quot;,
+      &quot;install_methods&quot;: [
+        &quot;Internal service catalog; clients connect to https://mcp.analytics.acme.internal&quot;
+      ],
+      &quot;install_time_behavior&quot;: &quot;No install; remote HTTP endpoint.&quot;,
+      &quot;data_residency&quot;: &quot;Company-owned infrastructure, same region as the warehouse.&quot;
+    },
+    &quot;protocols&quot;: {
+      &quot;mcp_spec_version&quot;: &quot;2026-07-28&quot;,
+      &quot;transport&quot;: [
+        &quot;streamable-http&quot;
+      ],
+      &quot;forward_compat_notes&quot;: &quot;Stateless core; no session-derived security decisions observed.&quot;,
+      &quot;tasks_status&quot;: &quot;not_declared&quot;,
+      &quot;mcp_apps_status&quot;: &quot;reviewed_unsafe&quot;
+    },
+    &quot;authentication_and_credential_risk&quot;: {
+      &quot;auth_client_to_server&quot;: &quot;oauth21_pkce&quot;,
+      &quot;auth_downstream&quot;: &quot;Service identity with per-caller row-level grants enforced in the warehouse.&quot;,
+      &quot;token_passthrough&quot;: false,
+      &quot;handle_security&quot;: &quot;not_applicable&quot;,
+      &quot;stored_credential_risk&quot;: &quot;low&quot;,
+      &quot;notes&quot;: &quot;Client auth and downstream scoping are sound and are not the reason for this verdict. The server declares no cross-call handle surface: it exposes no Tasks extension and threads no opaque handles between calls, so handle_security is not_applicable rather than unverified.&quot;
+    },
+    &quot;composition&quot;: {
+      &quot;trifecta_complete&quot;: false,
+      &quot;analysis&quot;: &quot;Warehouse data is private and the MCP App can reach an external origin, but the server exposes no send or write capability of its own, so the third leg is absent as reviewed. Note that F-01 and F-02 both give an attacker a path to push context at the model, which is adjacent to the trifecta&#x27;s untrusted-content leg even though the server does not complete it.&quot;,
+      &quot;blast_radius&quot;: &quot;Script execution inside a trusted assistant UI for every user who renders a dashboard, with the ability to drive the server&#x27;s read tools and inject context into their conversation.&quot;
+    }
+  },
+  &quot;risk_rating&quot;: {
+    &quot;factor_scores&quot;: {
+      &quot;provenance&quot;: 3,
+      &quot;capability&quot;: 4,
+      &quot;permissions&quot;: 2,
+      &quot;hosting_exposure&quot;: 2,
+      &quot;auth_strength&quot;: 1,
+      &quot;credential_storage&quot;: 2,
+      &quot;install_vector&quot;: 1,
+      &quot;code_hygiene&quot;: 3
+    },
+    &quot;composite&quot;: 2.4,
+    &quot;overrides_applied&quot;: [
+      &quot;mcp_apps_status: reviewed_unsafe -&gt; CRITICAL, recommendation do_not_connect&quot;
+    ]
+  },
+  &quot;recommendations&quot;: [
+    {
+      &quot;priority&quot;: 1,
+      &quot;action&quot;: &quot;Bundle the chart library into the UI and empty csp.resourceDomains, so the app executes only script the team ships and reviews.&quot;,
+      &quot;finding_ids&quot;: [
+        &quot;F-01&quot;
+      ],
+      &quot;control_ids&quot;: [
+        &quot;UI-1&quot;
+      ]
+    },
+    {
+      &quot;priority&quot;: 2,
+      &quot;action&quot;: &quot;Replace the innerHTML assignment with textContent, and keep UI markup independent of runtime data.&quot;,
+      &quot;finding_ids&quot;: [
+        &quot;F-02&quot;
+      ],
+      &quot;control_ids&quot;: [
+        &quot;UI-1&quot;,
+        &quot;OUT-3&quot;
+      ]
+    },
+    {
+      &quot;priority&quot;: 3,
+      &quot;action&quot;: &quot;Drop the camera permission from the UI resource.&quot;,
+      &quot;finding_ids&quot;: [
+        &quot;F-03&quot;
+      ],
+      &quot;control_ids&quot;: [
+        &quot;UI-1&quot;,
+        &quot;AGT-4&quot;
+      ]
+    },
+    {
+      &quot;priority&quot;: 4,
+      &quot;action&quot;: &quot;Record a hash of the ui:// resource content alongside the tool-definition hash, and re-check it on every version bump. The definition hash covers only the resourceUri pointer, so CSP and markup can change beneath an unchanged pointer.&quot;,
+      &quot;finding_ids&quot;: [
+        &quot;F-01&quot;,
+        &quot;F-02&quot;
+      ],
+      &quot;control_ids&quot;: [
+        &quot;SUP-6&quot;
+      ]
+    }
+  ],
+  &quot;limitations&quot;: {
+    &quot;disclaimer&quot;: &quot;Point-in-time assessment (2026-07-27) against the reviewed commit. Static and source review only; the UI was read as shipped, not rendered and exercised in a host. This report is not a warranty.&quot;,
+    &quot;verification_note&quot;: &quot;All three findings are reasoned from source: the CSP and permissions were read from the resource read handler and the sink from the shipped HTML, none exploited. Rendering the app in a real host with a poisoned dashboard name would upgrade F-02 to confirmed.&quot;
+  }
+}</pre></details></section><p class="footer">Generated from a schema-validated assessment.json · point-in-time · see Limitations.</p></div></body></html>

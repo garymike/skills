@@ -1,0 +1,180 @@
+{
+  "schema_version": 1,
+  "meta": {
+    "server_name": "analytics-mcp",
+    "version_or_endpoint": "v1.4.0 / https://mcp.analytics.acme.internal",
+    "publisher": "first-party (Data Platform)",
+    "assessed_date": "2026-07-27",
+    "assessor": "mcp-security-review",
+    "tier": 2,
+    "review_modes": ["code"],
+    "source_commit_sha": "3d9f1a7c5e2b8046af13c9d5e7b204a68f1c3d95",
+    "definition_hash_sha256": "sha256:placeholder-recompute-with-hash_tool_definitions-v2",
+    "scope_statement": "Review analytics-mcp before a company-wide rollout, with attention to the new MCP App shipped by analytics_render_dashboard.",
+    "checks_not_performed": ["part-e-runtime", "sandbox"]
+  },
+  "verdict": "do_not_connect",
+  "overall_risk": {
+    "rating": "critical",
+    "composite": 2.40
+  },
+  "executive_summary": {
+    "posture": "analytics-mcp is a sound read-only warehouse connector with one unsafe addition. Its new MCP App renders in the conversation under the host's own trust, yet it admits scripts from a public CDN the team does not control, writes the server's own tool output into innerHTML, and asks for camera access it has no use for. Any one of those turns an interactive chart into script execution and a path to push attacker-chosen context at the model. The rest of the server is fine, which is exactly why the UI needs fixing rather than the connector being abandoned.",
+    "top_finding_ids": ["F-01", "F-02"]
+  },
+  "findings": [
+    {
+      "id": "F-01",
+      "title": "MCP App CSP admits a public CDN, permitting third-party script execution in the UI",
+      "severity": "critical",
+      "category": {
+        "owasp_mcp_top10": "Supply Chain / Untrusted Content",
+        "review_part": "B",
+        "control_ids": ["UI-1"]
+      },
+      "affected_component": "ui://analytics/dashboard.html (resource _meta.ui.csp)",
+      "verification": "reasoned",
+      "status": "open",
+      "description": "The UI resource declares csp.resourceDomains of https://cdn.jsdelivr.net. resourceDomains governs scripts, stylesheets, images, and fonts, and the host renders MCP Apps in a deny-by-default iframe, so this entry is the specific thing permitting third-party script execution. jsdelivr is a public CDN serving arbitrary published packages; the Data Platform team does not control what it serves.",
+      "impact": "Anyone able to publish or tamper with content at that origin executes script inside a UI the user sees as part of the assistant. Because an MCP App can call tools and push context updates to the model, that script is not confined to browser mischief: it can drive tool calls the user believes they authorized and inject attacker-chosen text into the conversation, wearing the host's trust the whole time.",
+      "likelihood": "Moderate: it needs a compromised or malicious package at the CDN origin rather than a direct attack on this server, but that is a well-worn supply-chain path and nothing in this configuration would detect it.",
+      "evidence": {
+        "location": "resource read handler for ui://analytics/dashboard.html",
+        "detail": "_meta: { ui: { csp: { connectDomains: [\"https://api.analytics-vendor.example\"], resourceDomains: [\"https://cdn.jsdelivr.net\"] }, domain: \"analytics.acme.internal\" } }",
+        "secret_masked": false
+      },
+      "remediation": {
+        "summary": "Bundle the chart library into the HTML (vite-plugin-singlefile or equivalent) and drop resourceDomains to empty, which is the configuration the extension is designed around. If an external origin is genuinely unavoidable, it must be one the team controls and pins by digest, never a shared public CDN.",
+        "control_ids": ["UI-1", "SUP-1"]
+      }
+    },
+    {
+      "id": "F-02",
+      "title": "MCP App writes tool output into innerHTML",
+      "severity": "high",
+      "category": {
+        "owasp_mcp_top10": "Injection",
+        "review_part": "B",
+        "control_ids": ["UI-1", "OUT-3"]
+      },
+      "affected_component": "ui://analytics/dashboard.html (rendering code)",
+      "verification": "reasoned",
+      "status": "open",
+      "description": "The UI assigns the tool's own result into innerHTML: document.getElementById('title').innerHTML = result.dashboardName. Dashboard names come from the warehouse, so any user who can name a dashboard controls markup rendered inside the app.",
+      "impact": "A dashboard named with a script payload executes when the app renders, in the same trusted UI context as F-01 and with the same reach into tool calls and model context. This is the case UI-1 and OUT-3 both exist to prevent: UI markup built from runtime data rather than shipped as a reviewed static artifact.",
+      "likelihood": "High where dashboard names are user-editable, which is the normal case for a warehouse analytics tool.",
+      "evidence": {
+        "location": "ui://analytics/dashboard.html",
+        "detail": "document.getElementById('title').innerHTML = result.dashboardName;",
+        "secret_masked": false
+      },
+      "remediation": {
+        "summary": "Use textContent rather than innerHTML for any value derived from tool output or warehouse data. Keep the UI a static reviewed artifact whose markup does not vary with runtime data.",
+        "control_ids": ["UI-1", "OUT-3"]
+      }
+    },
+    {
+      "id": "F-03",
+      "title": "MCP App requests camera permission unrelated to its function",
+      "severity": "moderate",
+      "category": {
+        "owasp_mcp_top10": "Excessive Agency",
+        "review_part": "B",
+        "control_ids": ["UI-1", "AGT-4"]
+      },
+      "affected_component": "ui://analytics/dashboard.html (resource _meta.ui permissions)",
+      "verification": "reasoned",
+      "status": "open",
+      "description": "The UI resource requests camera permission. Rendering a chart from data the tool already returned needs no camera access, and nothing else in the tool's description suggests a capture feature.",
+      "impact": "Excess capability in a UI that already has two paths to script execution. If either is exploited, the granted permission is available to the attacker; and a permission prompt arriving from a trusted assistant surface is one users are unusually likely to accept.",
+      "remediation": {
+        "summary": "Remove the camera permission. Request only capabilities the tool's stated function requires, and justify each in the tool description.",
+        "control_ids": ["UI-1", "AGT-4"]
+      }
+    }
+  ],
+  "technical_assessment": {
+    "profile": {
+      "purpose": "Query the analytics warehouse and render dashboards for agents, company-wide.",
+      "creator_publisher": "first-party (Data Platform)",
+      "maintenance_signals": "Active internal repo, fortnightly releases, 4 maintainers.",
+      "license": "internal"
+    },
+    "capabilities": [
+      { "name": "analytics_query", "function": "Run a read-only query against the warehouse.", "class": "read" },
+      { "name": "analytics_list_dashboards", "function": "List dashboards visible to the caller.", "class": "read" },
+      { "name": "analytics_render_dashboard", "function": "Render a dashboard as an interactive MCP App.", "class": "read" }
+    ],
+    "permissions": ["warehouse.read (scoped to the caller's own row-level grants)"],
+    "hosting": {
+      "hosting_model": "remote_self",
+      "install_methods": ["Internal service catalog; clients connect to https://mcp.analytics.acme.internal"],
+      "install_time_behavior": "No install; remote HTTP endpoint.",
+      "data_residency": "Company-owned infrastructure, same region as the warehouse."
+    },
+    "protocols": {
+      "mcp_spec_version": "2026-07-28",
+      "transport": ["streamable-http"],
+      "forward_compat_notes": "Stateless core; no session-derived security decisions observed.",
+      "tasks_status": "not_declared",
+      "mcp_apps_status": "reviewed_unsafe"
+    },
+    "authentication_and_credential_risk": {
+      "auth_client_to_server": "oauth21_pkce",
+      "auth_downstream": "Service identity with per-caller row-level grants enforced in the warehouse.",
+      "token_passthrough": false,
+      "handle_security": "not_applicable",
+      "stored_credential_risk": "low",
+      "notes": "Client auth and downstream scoping are sound and are not the reason for this verdict. The server declares no cross-call handle surface: it exposes no Tasks extension and threads no opaque handles between calls, so handle_security is not_applicable rather than unverified."
+    },
+    "composition": {
+      "trifecta_complete": false,
+      "analysis": "Warehouse data is private and the MCP App can reach an external origin, but the server exposes no send or write capability of its own, so the third leg is absent as reviewed. Note that F-01 and F-02 both give an attacker a path to push context at the model, which is adjacent to the trifecta's untrusted-content leg even though the server does not complete it.",
+      "blast_radius": "Script execution inside a trusted assistant UI for every user who renders a dashboard, with the ability to drive the server's read tools and inject context into their conversation."
+    }
+  },
+  "risk_rating": {
+    "factor_scores": {
+      "provenance": 3,
+      "capability": 4,
+      "permissions": 2,
+      "hosting_exposure": 2,
+      "auth_strength": 1,
+      "credential_storage": 2,
+      "install_vector": 1,
+      "code_hygiene": 3
+    },
+    "composite": 2.40,
+    "overrides_applied": ["mcp_apps_status: reviewed_unsafe -> CRITICAL, recommendation do_not_connect"]
+  },
+  "recommendations": [
+    {
+      "priority": 1,
+      "action": "Bundle the chart library into the UI and empty csp.resourceDomains, so the app executes only script the team ships and reviews.",
+      "finding_ids": ["F-01"],
+      "control_ids": ["UI-1"]
+    },
+    {
+      "priority": 2,
+      "action": "Replace the innerHTML assignment with textContent, and keep UI markup independent of runtime data.",
+      "finding_ids": ["F-02"],
+      "control_ids": ["UI-1", "OUT-3"]
+    },
+    {
+      "priority": 3,
+      "action": "Drop the camera permission from the UI resource.",
+      "finding_ids": ["F-03"],
+      "control_ids": ["UI-1", "AGT-4"]
+    },
+    {
+      "priority": 4,
+      "action": "Record a hash of the ui:// resource content alongside the tool-definition hash, and re-check it on every version bump. The definition hash covers only the resourceUri pointer, so CSP and markup can change beneath an unchanged pointer.",
+      "finding_ids": ["F-01", "F-02"],
+      "control_ids": ["SUP-6"]
+    }
+  ],
+  "limitations": {
+    "disclaimer": "Point-in-time assessment (2026-07-27) against the reviewed commit. Static and source review only; the UI was read as shipped, not rendered and exercised in a host. This report is not a warranty.",
+    "verification_note": "All three findings are reasoned from source: the CSP and permissions were read from the resource read handler and the sink from the shipped HTML, none exploited. Rendering the app in a real host with a poisoned dashboard name would upgrade F-02 to confirmed."
+  }
+}

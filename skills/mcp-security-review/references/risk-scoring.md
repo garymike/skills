@@ -26,19 +26,47 @@ All four values have a defined treatment; record which one applied.
 - `declared_unverified` raises Auth strength to at least 4, the standard unknown treatment from the opening rule. No exemption: the declaration itself is what a deploying organization relies on, so an unrun check on it is exactly the kind of ignorance that scores 4. If the mechanism already scores worse, keep the worse score; unknowns raise risk, never lower it.
 - `not_declared` is neutral and has no effect on any factor. The server is simply not using the extension; score Auth strength on its client-to-server mechanism alone.
 
+### `handle_security` and the Auth strength factor
+
+- `verified_broken` scores Auth strength 5. A bypassable handle is a bypassable authorization path, scored the same way `ema_status: verified_broken` and token passthrough already are.
+- `unverified` raises Auth strength to at least 4, the standard unknown treatment. Keep a worse score if the mechanism already earns one.
+- `verified_sound` does not lower Auth strength below what the client-to-server mechanism earns on its own; sound handles are the baseline expectation under the stateless core, not a bonus.
+- `not_applicable` is neutral and affects nothing.
+
+### `tasks_status` and the Capability factor
+
+Tasks scores through Capability / blast radius, not Auth strength, and carries no override: unbounded task creation is an availability problem, not a confidentiality or integrity bypass.
+
+- `verified_unbounded` raises Capability by one step (never above 5). A cheap request that commits durable, uncancellable server-side work is real blast radius, but denial of service alone does not justify forcing a verdict.
+- `declared_unverified` raises Capability to at least 4, the standard unknown treatment.
+- `verified_bounded` and `not_declared` are neutral.
+
+### `mcp_apps_status` and the Capability factor
+
+- `reviewed_unsafe` forces CRITICAL by override, so its factor contribution is moot; still record Capability honestly for the register.
+- `declared_unreviewed` raises Capability to at least 4: an unread UI resource is exactly the kind of unknown that scores 4, and it is the half of the MCP Apps surface the definition hash cannot see.
+- `reviewed_safe` and `not_declared` are neutral.
+
 ## Rating map
 
 | Composite | Rating |
 |---|---|
 | ≤ 1.8 | LOW |
-| 1.9 - 2.9 | MODERATE |
-| 3.0 - 3.9 | HIGH |
+| above 1.8, below 3.0 | MODERATE |
+| 3.0 up to below 4.0 | HIGH |
 | ≥ 4.0 | CRITICAL |
+
+The bands are contiguous on purpose: every composite lands in exactly one. An earlier
+version read `1.9 - 2.9` and `3.0 - 3.9`, which left 1.81 to 1.89 and 2.91 to 2.99
+unclassifiable. That was not hypothetical, since a composite of 1.85 falls in the first
+gap. Do not restate the bands as bare ranges without checking that the edges still meet.
 
 ## Overrides (apply after arithmetic)
 
 - Any automatic disqualifier from `risk-tiering.md` (hardcoded secrets, token passthrough, poisoned descriptions, typosquat, fetch-and-execute installs) → CRITICAL, recommendation `do_not_connect`.
 - `ema_status: verified_broken` → CRITICAL, recommendation `do_not_connect`. A server that advertises Enterprise-Managed Authorization while accepting a forged, wrong-`resource`, wrong-`aud`, or expired ID-JAG is a worse posture than not declaring the extension at all: it creates false assurance that centralized enterprise policy is enforced.
+- `mcp_apps_status: reviewed_unsafe` → CRITICAL, recommendation `do_not_connect`. An MCP App renders inside the conversation, can push context updates to the model, and runs whatever its CSP admits. A UI that builds HTML from tool output, or whose `csp` admits origins the publisher does not control, is both a script-execution vector and an injection path into the conversation, wearing the host's own trust.
+- `handle_security: verified_broken` → CRITICAL, recommendation `do_not_connect`. Under the stateless core the handle is the only thing binding a caller to their own work. A predictable or unbound handle means another caller can resume, read, or cancel it, which is a direct authorization bypass, not a hardening gap.
 - Known exploited CVE in the pinned version → CRITICAL until patched version reassessed.
 - Composition: completes the lethal trifecta for a real user population → minimum HIGH regardless of composite, with the condition set that would reduce it stated in recommendations.
 - Two or more High findings → minimum HIGH.

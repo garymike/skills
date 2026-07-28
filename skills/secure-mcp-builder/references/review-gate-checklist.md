@@ -38,6 +38,7 @@ Complete for every server before ship and after any material change. Every MUST 
 ## Gate D: Secrets, logging, supply chain
 
 - [ ] No secrets in code, repo, images, descriptions, or logs; startup fails closed (SEC-1/2)
+- [ ] (Remote HTTP) No credential, token, or PII is ever placed in `Mcp-Method` or `Mcp-Name`; header/body mismatches are rejected (SEC-5)
 - [ ] Structured audit log per invocation with principal and redaction; denials logged as security events (LOG-1/2/4)
 - [ ] Dependencies pinned; vuln scan and SAST green in CI; SBOM generated (SUP-1/2)
 - [ ] (Containerized) non-root, read-only fs, minimal image, no-new-privileges + dropped caps + seccomp/AppArmor, CPU/memory limits, default-deny egress allowlist (SUP-3)
@@ -53,6 +54,8 @@ Complete for every server before ship and after any material change. Every MUST 
 - [ ] No server-side per-session state; cross-call state is signed, user-bound, expiring handles (ST-2)
 - [ ] No new dependencies on Roots, Sampling, or Logging protocol features
 - [ ] SDK version pinned; 2026-07-28 migration notes recorded if applicable
+- [ ] (If MCP Apps declared) UI resources are static reviewed artifacts, CSP lists only origins you control, permissions are minimal, and each resource's content is hashed alongside the definition manifest (UI-1, SUP-6)
+- [ ] (If Tasks declared) Task creation is rate-limited, the advertised TTL is enforced, and `tasks/cancel` stops the work rather than only setting status (AGT-5)
 
 ## Sign-off
 
