@@ -6,6 +6,30 @@ All notable changes to this repo are documented here. Versions match the
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-07-28
+
+### Fixed
+- **mcp-security-review: `domain` is now explained rather than just named.** The MCP Apps
+  checklist item listed `_meta.ui.domain` without saying what it does, because its
+  semantics were not verified when the item was written, and the schema's
+  `mcp_apps_status` criteria omitted it entirely. Confirmed against the MCP Apps
+  documentation: a sandboxed iframe has no same-origin server, so `domain` gives the app a
+  stable origin that external API servers can CORS-allowlist, derived in the reference
+  implementation from a SHA-256 of the MCP server's own URL. The checklist now asks the two
+  questions that follow, whether the value is genuinely derived from the server under
+  review rather than asserted as another app's origin, and which of your APIs allowlist it.
+
+### Changed
+- **secure-mcp-builder: renumbered the UI surface section.** It shipped unnumbered between
+  sections 7 and 8, so the outline read 1 through 7, unnumbered, 8. It is now section 8 and
+  agentic composition risks is section 9. No control ids changed.
+- **mcp-security-review: documented why `tasks_status` scores differently.**
+  `verified_unbounded` raises Capability by one relative step where every other unknown or
+  negative state uses a raise-to-at-least-4 floor. That was deliberate and is now said so:
+  Capability is already scored from the tool surface, and unbounded tasks add reach on top
+  of it rather than defining it, so a floor would score a read-only server with sloppy task
+  limits the same as a destructive one.
+
 ## [0.7.0] - 2026-07-28
 
 ### Added

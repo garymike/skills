@@ -37,7 +37,7 @@ All four values have a defined treatment; record which one applied.
 
 Tasks scores through Capability / blast radius, not Auth strength, and carries no override: unbounded task creation is an availability problem, not a confidentiality or integrity bypass.
 
-- `verified_unbounded` raises Capability by one step (never above 5). A cheap request that commits durable, uncancellable server-side work is real blast radius, but denial of service alone does not justify forcing a verdict.
+- `verified_unbounded` raises Capability by one step (never above 5). A cheap request that commits durable, uncancellable server-side work is real blast radius, but denial of service alone does not justify forcing a verdict. Note this is a relative step, not the "raise to at least 4" floor every other unknown and negative state uses. That is deliberate: Capability is already scored from the tool surface, and unbounded tasks *add* reach on top of whatever the tools provide rather than defining it. A floor would score a read-only server with sloppy task limits the same as a destructive one, which is the wrong answer.
 - `declared_unverified` raises Capability to at least 4, the standard unknown treatment.
 - `verified_bounded` and `not_declared` are neutral.
 
