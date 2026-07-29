@@ -149,7 +149,7 @@
             },
             "mcp_apps_status": {
               "enum": ["not_declared", "declared_unreviewed", "reviewed_safe", "reviewed_unsafe"],
-              "description": "MCP Apps, the 2026-07-28 interactive-UI extension. Declared per tool via _meta.ui.resourceUri pointing at a ui:// resource, not as a server capability. not_declared: no tool declares a UI. declared_unreviewed: at least one does, but the ui:// resource was not fetched and read. reviewed_safe: the resource was read and its HTML, csp.connectDomains, csp.resourceDomains, and requested permissions are all justified by the tool's purpose. reviewed_unsafe: the UI builds HTML dynamically from tool output or upstream data, or csp permits origins the publisher does not control, or it requests capabilities unrelated to its function."
+              "description": "MCP Apps, the 2026-07-28 interactive-UI extension. Declared per tool via _meta.ui.resourceUri pointing at a ui:// resource, not as a server capability. not_declared: no tool declares a UI. declared_unreviewed: at least one does, but the ui:// resource was not fetched and read. reviewed_safe: the resource was read and its HTML, csp.connectDomains, csp.resourceDomains, domain (the stable origin external APIs CORS-allowlist for this app), and requested permissions are all justified by the tool's purpose. reviewed_unsafe: the UI builds HTML dynamically from tool output or upstream data, or csp permits origins the publisher does not control, or it requests capabilities unrelated to its function."
             }
           }
         },
