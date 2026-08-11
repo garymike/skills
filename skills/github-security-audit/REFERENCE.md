@@ -193,6 +193,68 @@ gh repo delete <owner>/<repo> --yes
 
 ---
 
+## Workflow run health
+
+A repo can have `security.yml` and still scan nothing. Check the last run of **each trigger**, not the newest run overall.
+
+### 1. Per-trigger status
+
+```bash
+for r in <owner>/<repo1> <owner>/<repo2>; do
+  echo "$r"
+  echo "  push:     $(gh run list --repo $r --workflow Security --event push     --limit 1 --json conclusion --jq '.[0].conclusion // "none"')"
+  echo "  schedule: $(gh run list --repo $r --workflow Security --event schedule --limit 1 --json conclusion --jq '.[0].conclusion // "none"')"
+done
+```
+
+A green `push` next to a failing `schedule` is the signal to chase — the `audit` job is gated on `if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'`, so it never runs on push or PR.
+
+`schedule: none` on a repo that has had `security.yml` for over a week usually means the default branch is wrong: scheduled runs resolve against the default branch, so a workflow living only on `main` never fires if the default branch points elsewhere.
+
+### 2. Diagnose a `startup_failure`
+
+There are no logs, no jobs, and no annotations, so nothing is retrievable through the usual routes. Diagnose by inspection:
+
+```bash
+# Does the pinned reusable workflow request a permission the caller withheld?
+gh api "repos/<owner>/security-workflows/contents/.github/workflows/security-scan.yml?ref=<PINNED_SHA>" \
+  --jq '.content' | base64 -d | sed -n '/^jobs:/,/steps:/p'
+```
+
+Compare the reusable workflow's job-level `permissions:` against the caller's. Every permission the callee requests must also appear in the caller — the caller's block is a hard ceiling, and any gap is rejected before a job starts. `packages: read` is the usual culprit, added when a workflow starts pulling an image from GHCR.
+
+### 3. Diagnose a failing job step
+
+```bash
+JID=$(gh api repos/<owner>/<repo>/actions/runs/<RUN_ID>/jobs \
+  --jq '.jobs[]|select(.conclusion=="failure")|.id')
+gh api repos/<owner>/<repo>/actions/jobs/$JID/logs --allow-escape-sequences \
+  | sed 's/\x1b\[[0-9;]*m//g' | tail -40
+```
+
+Without `--allow-escape-sequences` the call errors out; without the `sed` the output is unreadable.
+
+### 4. Compare pins across callers
+
+```bash
+for r in <repo list>; do
+  c=$(gh api repos/$r/contents/.github/workflows/security.yml --jq '.content' 2>/dev/null | base64 -d 2>/dev/null)
+  [ -z "$c" ] && { echo "$r | NO security.yml"; continue; }
+  echo "$r | packages:read=$(echo "$c" | grep -c 'packages: read') | ref=$(echo "$c" | grep -oE 'security-scan\.yml@[^ ]+' | head -1 | sed 's/.*@//' | cut -c1-12)"
+done
+```
+
+Then check whether an old pin predates a known fix in the shared workflow:
+
+```bash
+gh api "repos/<owner>/security-workflows/contents/.github/workflows/security-audit.yml?ref=<SHA>" \
+  --jq '.content' | base64 -d | grep -m1 'PERMS=\$('
+```
+
+An advisory step that captures command output must use `|| true` — under `bash -e`, a failed command inside `VAR=$(...)` aborts the job even when the step only meant to emit a `::warning::`.
+
+---
+
 ## Gotchas
 
 - `hasVulnerabilityAlertsEnabled` is not a valid `--json` field in `gh repo list` — use the API endpoint instead
@@ -202,3 +264,10 @@ gh repo delete <owner>/<repo> --yes
 - `gh repo delete` requires the `delete_repo` scope — default login token won't have it
 - The vulnerability-alerts API returns 404 when disabled (not a 200 with a `false` field)
 - Gitleaks `fetch-depth: 0` is required — without it only the latest commit is scanned
+- `startup_failure` yields no jobs, no logs, and no annotations — `gh run view --log` returns "log not found". Diagnose by inspecting the workflow files, not the run
+- A reusable workflow cannot request a permission its caller withheld; the caller's `permissions:` block is a hard ceiling and the mismatch is rejected at startup
+- Scheduled runs resolve against the **default branch** — a workflow on `main` never fires on a schedule if the default branch points at some other branch
+- `gh run list --workflow` matches on the workflow's `name:` field, not the filename
+- Reading Actions job logs needs `--allow-escape-sequences`; strip ANSI with `sed 's/\x1b\[[0-9;]*m//g'`
+- CodeQL's built-in languages are `actions, cpp, csharp, go, java, javascript, python, ruby, rust, swift`. **Shell, PowerShell, Bicep, and Dockerfile are not among them** — do not add a CodeQL workflow for those and call it coverage. `actions` analyses workflow files themselves and is often the only applicable language for an infra repo. Verify against `github/codeql-action` → `src/languages/builtin.json` rather than assuming
+- Dependabot rarely opens a PR for a **transitive** Rust dependency, even with security updates on. Check `Cargo.lock` for the vulnerable crate, confirm the parent's version requirement already allows the patched release, and fix with `cargo update -p <crate> --precise <version>` — a lockfile-only change

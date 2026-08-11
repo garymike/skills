@@ -6,6 +6,43 @@ All notable changes to this repo are documented here. Versions match the
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-08-11
+
+### Added
+- **github-security-audit: workflow run health is now a first-class check.** A repo could hold
+  `security.yml`, pass every other check, and scan nothing — the audit had no way to see it.
+  Three failure modes were found live in the estate and each is now checked explicitly.
+  `startup_failure` produces no jobs, no logs, and no annotations (`gh run view --log` returns
+  "log not found"), so it reads as an infra blip; its usual cause is a reusable workflow
+  requesting a permission the caller withheld, which GitHub rejects before any job starts.
+  Jobs gated on `if: github.event_name == 'schedule'` never run on push or PR, so green PR
+  checks sat on top of a scheduled job that had failed weekly for a month. And a caller pinned
+  to a stale SHA keeps running bugs the shared workflow already fixed. Health is now scored per
+  trigger rather than on the newest run, has its own summary-table column, and appears in the
+  severity definitions — `startup_failure` as High, a failing scheduled run as Medium.
+- **github-security-audit: `REFERENCE.md` gained a workflow run health section** with the
+  per-trigger status sweep, how to diagnose a `startup_failure` by inspection (there is nothing
+  to fetch), how to read a failing job's log (`--allow-escape-sequences` plus ANSI stripping,
+  both required), and how to compare pins across callers against a known-fixed bug.
+
+### Fixed
+- **Restored `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`.** v0.7.1
+  emptied both files — 31 deletions, leaving two zero-byte manifests committed — so the
+  marketplace entry has been broken since 2026-07-28 and the version field that release
+  claimed to bump was in fact deleted rather than set. Contents restored from v0.7.0 and
+  bumped to 0.8.0.
+
+### Changed
+- **github-security-audit: recorded CodeQL's real language set.** `Shell`, `PowerShell`,
+  `Bicep`, and `Dockerfile` are not CodeQL languages, so adding a CodeQL workflow to an infra
+  repo and calling it coverage is wrong. The reference now names the built-in set, points at
+  `github/codeql-action` → `src/languages/builtin.json` as the thing to verify against, and
+  notes that `actions` is frequently the only applicable language for such repos.
+- **github-security-audit: noted Dependabot's transitive-dependency gap.** Dependabot rarely
+  opens a PR for a transitive Rust dependency even with security updates enabled; the
+  reference now describes confirming the parent's version requirement and fixing with a
+  lockfile-only `cargo update -p <crate> --precise <version>`.
+
 ## [0.7.1] - 2026-07-28
 
 ### Fixed

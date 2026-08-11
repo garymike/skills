@@ -43,6 +43,15 @@ Run all checks per active non-fork repo. Run in parallel where possible.
 - [ ] **CodeQL** analysis enabled (free for public repos)
 - [ ] **Sensitive files** in public repos (scan git tree for `.env`, `.pem`, `.key`, credentials)
 - [ ] **Visibility intent** — read `.github/repo-metadata.yml`; compare `visibility:` field against actual repo visibility; flag mismatches as a finding. If file is missing, note it and infer intent from README/description as a fallback. If user has explicitly confirmed visibility, treat as acknowledged.
+- [ ] **Workflow run health** — a repo can have `security.yml` and still be scanning nothing. Check per trigger, not just the newest run. See [workflow run health](REFERENCE.md#workflow-run-health).
+
+#### Why workflow health needs its own check
+
+Configuration presence is not coverage. Three failure modes hide from a normal glance, and all three have been found in this estate:
+
+- **`startup_failure` is silent.** The workflow never starts, so there are no jobs, no logs, and no annotations — just a bare red X that reads like an infra blip. Most often caused by a reusable workflow requesting a permission the caller withheld: the caller's `permissions:` block is a hard ceiling, and GitHub rejects the mismatch before any job runs.
+- **Schedule-gated jobs are invisible on PRs.** A job behind `if: github.event_name == 'schedule'` never runs on push or pull_request, so green PR checks can sit on top of a scheduled job that has failed every week for a month.
+- **Stale pins rot silently.** A caller pinned to an old SHA keeps running old logic, including bugs the shared workflow has since fixed. Pinning is still correct — but pins need a refresh cadence, and drifting pins fail in the opposite direction from `@main`.
 
 ### Stale / risky repos
 - [ ] Old public repos with no apparent purpose (archive or make private)
@@ -56,18 +65,22 @@ Always use this exact three-section structure — do not deviate:
 
 One row per active non-fork repo. Columns in this order:
 
-| Repo | Visibility | Dependabot alerts | Auto-fix | Actions perms | Branch protection | Secret scanning | security.yml | SECURITY.md | repo-metadata.yml | Delete-on-merge |
+| Repo | Visibility | Dependabot alerts | Auto-fix | Actions perms | Branch protection | Secret scanning | security.yml | Workflow health | SECURITY.md | repo-metadata.yml | Delete-on-merge |
 
 Use ✅ / ❌ / ⚠️ in each cell. Add a short inline note where context helps (e.g. "read-only", "native", "gitleaks", "n/a (Pro)", "mismatch"). Use footnotes (¹ ²) for exceptions that need more explanation. This table is the first thing the user sees.
+
+**Workflow health** is scored on the last run of *each* trigger, not the newest run overall. Mark ❌ for `startup_failure` or a failing scheduled run, ⚠️ for a stale pin or a repo whose scheduled run has never fired, ✅ only when both push and schedule are green. Never let a green push run stand in for a scheduled one.
 
 ### Section 2 — Findings by severity
 
 After the table, list findings grouped under **High**, **Medium**, and **Low** headers. Each finding is a bullet with: what's wrong, which repos are affected, and one-line explanation of impact. Skip a severity group if there are no findings in it.
 
 Severity definitions:
-- **High** — Dependabot off, secrets hardcoded in public repo, 2FA not confirmed, push protection off on public repo
-- **Medium** — No branch protection on public repos, gitleaks missing on private repos, Actions permissions not read-only, unpinned action versions, missing `security.yml` on repos that should have it
-- **Low** — Delete-on-merge off, no SECURITY.md, CodeQL not enabled, stale public repos, missing `repo-metadata.yml`
+- **High** — Dependabot off, secrets hardcoded in public repo, 2FA not confirmed, push protection off on public repo, `security.yml` failing at `startup_failure` (present but scanning nothing)
+- **Medium** — No branch protection on public repos, gitleaks missing on private repos, Actions permissions not read-only, unpinned action versions, missing `security.yml` on repos that should have it, scheduled security run failing, caller pinned to a SHA with a known-fixed bug
+- **Low** — Delete-on-merge off, no SECURITY.md, CodeQL not enabled, stale public repos, missing `repo-metadata.yml`, caller pin more than ~4 weeks behind the shared workflow
+
+Report a broken workflow as its own finding with the failing step named, not as a footnote on the `security.yml` column. "Present but broken" is worse than absent, because it reads as covered on every other check.
 
 ### Section 3 — Proposed fixes table
 
