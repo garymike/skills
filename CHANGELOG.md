@@ -33,6 +33,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   bumped to 0.8.0.
 
 ### Changed
+- **Local installs are junctions now, not copies, and `CLAUDE.md` says so.**
+  `~/.claude/skills/github-security-audit` had been a copied folder and had drifted from this
+  repo in *both* directions — the repo ahead in `SKILL.md`, the copy ahead in `REFERENCE.md`.
+  Nothing warned about it, and the copy was what actually ran, so repo edits silently did
+  nothing while the audit used stale guidance. It is now a directory junction into
+  `skills/github-security-audit`, which makes divergence structurally impossible. The
+  installed-only `REFERENCE.md` content has been folded back in: the read-only Actions
+  explanation and its verify command, what a SHA pin looks like versus a tag, the full
+  warn-only gitleaks workflow, and several sharpened gotchas.
 - **github-security-audit: recorded CodeQL's real language set.** `Shell`, `PowerShell`,
   `Bicep`, and `Dockerfile` are not CodeQL languages, so adding a CodeQL workflow to an infra
   repo and calling it coverage is wrong. The reference now names the built-in set, points at

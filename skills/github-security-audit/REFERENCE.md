@@ -43,13 +43,22 @@ gh api repos/<owner>/<repo> -X PATCH -f delete_branch_on_merge=true --jq '.delet
 
 ### Actions default permissions — read-only (free, all repos)
 
+Restricts all workflows to read-only by default. Individual workflows can still request write via `permissions:`.
+
 ```bash
 gh api repos/<owner>/<repo>/actions/permissions/workflow -X PUT \
   -f default_workflow_permissions=read \
   -f can_approve_pull_request_reviews=false
 ```
 
+Verify:
+```bash
+gh api repos/<owner>/<repo>/actions/permissions/workflow --jq '{default: .default_workflow_permissions, can_approve_prs: .can_approve_pull_request_reviews}'
+```
+
 ### Check for unpinned actions in workflows (free)
+
+Scan workflow files for `uses: owner/action@v1` style tags (unpinned). SHA-pinned looks like `uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683`.
 
 ```bash
 gh api repos/<owner>/<repo>/git/trees/main?recursive=1 \
@@ -101,17 +110,27 @@ jobs:
       - uses: github/codeql-action/analyze@v3
 ```
 
-CodeQL supports: `cpp`, `csharp`, `go`, `java`, `javascript`, `python`, `ruby`, `swift`.
+Adjust the `language` matrix to match the repo's primary languages. The built-in set is `actions`, `cpp`, `csharp`, `go`, `java`, `javascript`, `python`, `ruby`, `rust`, `swift` — with `typescript` → `javascript`, `kotlin` → `java`, and `c`/`c++` → `cpp` as aliases.
+
+**Check the repo's languages before adding this workflow.** `Shell`, `PowerShell`, `Bicep`, and `Dockerfile` are not CodeQL languages, and a matrix naming one analyses nothing. For an infra repo with no supported language, `actions` alone is still worth running — it inspects the workflow files for script injection, excessive permissions, and untrusted-input flows. Verify the current set against `github/codeql-action` → `src/languages/builtin.json` rather than trusting this list.
+
+```bash
+gh api repos/<owner>/<repo>/languages --jq 'keys|join(", ")'
+```
 
 ### Gitleaks secret scanning (free — for private repos)
 
-**Fail-hard (recommended):**
+When prompting user for fail-hard vs warn-only, present both options:
+
+**Fail-hard (recommended)** — blocks the PR/push if secrets found:
 ```yaml
 name: Secret scanning
+
 on:
   push:
     branches: ["**"]
   pull_request:
+
 jobs:
   gitleaks:
     runs-on: ubuntu-latest
@@ -124,9 +143,29 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-**Warn-only** — add `continue-on-error: true` to the gitleaks step.
+**Warn-only** — reports findings but does not block merges:
+```yaml
+name: Secret scanning
 
-Use the GitHub MCP `create_or_update_file` tool to push this without cloning locally.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+Use the GitHub MCP `create_or_update_file` tool to push this without cloning. Push to all private repos in parallel.
 
 ### Branch protection (public repos — free)
 
@@ -146,9 +185,13 @@ gh api repos/<owner>/<repo>/branches/main/protection -X PUT \
 EOF
 ```
 
-Returns 403 for private repos on Free plan — do not attempt.
+`required_signatures: true` enforces GPG/SSH signed commits. Note: returns 403 for private repos on Free plan — do not attempt.
+
+Commits created through the contents API are **unsigned**, so on a repo requiring signatures they cannot be pushed straight to the protected branch. Land them on a side branch and merge through GitHub — the merge or squash commit GitHub creates is signed by its own key and satisfies the rule.
 
 ### Add SECURITY.md (free, all repos)
+
+Minimal template to commit at `SECURITY.md` in the repo root:
 
 ```markdown
 # Security Policy
@@ -176,7 +219,7 @@ gh api repos/<owner>/<repo>/git/trees/main?recursive=1 \
   --jq '[.tree[] | select(.path | test("[.](env|pem|key|crt|p12|pfx)$")) | .path]'
 ```
 
-Inspect matches — `.env.example` is fine, `.env` is not.
+Inspect any matches before flagging — `.env.example` is fine, `.env` is not. Source files whose names merely contain `credential` are usually legitimate code, not secrets; open them before reporting.
 
 ### Archive a stale repo
 
@@ -187,7 +230,7 @@ gh api repos/<owner>/<repo> -X PATCH -f archived=true
 ### Delete a repo (requires delete_repo scope)
 
 ```bash
-gh auth refresh -h github.com -s delete_repo
+gh auth refresh -h github.com -s delete_repo   # one-time scope grant
 gh repo delete <owner>/<repo> --yes
 ```
 
@@ -259,11 +302,12 @@ An advisory step that captures command output must use `|| true` — under `bash
 
 - `hasVulnerabilityAlertsEnabled` is not a valid `--json` field in `gh repo list` — use the API endpoint instead
 - Branch protection returns **403** (not 404) for private repos on Free plan
-- Secret scanning returns **422** when enabled on private repos without GHAS — offer gitleaks instead
+- Secret scanning returns **422** when enabled on private repos without GHAS — offer gitleaks instead, never try to enable it on private repos
 - Push protection returns **422** on private repos without GHAS — same as above
 - `gh repo delete` requires the `delete_repo` scope — default login token won't have it
-- The vulnerability-alerts API returns 404 when disabled (not a 200 with a `false` field)
-- Gitleaks `fetch-depth: 0` is required — without it only the latest commit is scanned
+- The vulnerability-alerts API returns 404 when disabled (not a 200 with a `false` field) — treat 404 as "disabled"
+- CodeQL `autobuild` works for compiled languages; interpreted languages (JS, Python) don't need it, and with `build-mode: none` the step should be omitted entirely
+- Gitleaks `fetch-depth: 0` is required — without it only the latest commit is scanned, not the full history
 - `startup_failure` yields no jobs, no logs, and no annotations — `gh run view --log` returns "log not found". Diagnose by inspecting the workflow files, not the run
 - A reusable workflow cannot request a permission its caller withheld; the caller's `permissions:` block is a hard ceiling and the mismatch is rejected at startup
 - Scheduled runs resolve against the **default branch** — a workflow on `main` never fires on a schedule if the default branch points at some other branch
