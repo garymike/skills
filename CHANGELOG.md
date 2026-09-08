@@ -6,6 +6,23 @@ All notable changes to this repo are documented here. Versions match the
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-09-07
+
+### Changed
+- **skill-security-review: corrected the developer-execution-surface framing again.** The 0.4.1
+  correction below replaced one wrong claim with another. "Advisory scanners flag but don't gate
+  on it, exit 0, no fail-on" is false and always was: SkillSpector gates on exit code, exit 1
+  above a `risk_score` of 50. Measured against the security-workflows fixtures on both the pinned
+  v2.3.11 and v2.5.0, it **blocks** the `.test.ts` carrier at 73/100 (`DO NOT INSTALL`, exit 1)
+  and **clears** the `.husky/pre-commit` carrier at 28/100 (`CAUTION`, exit 0), having found the
+  payload in both and classified the git hook as `Executable: No`. So the real gap is carrier
+  coverage, not enforcement versus advice, and it is narrower than what this skill told reviewers.
+  Corrected in the `description` and the source mapping. The two-surface methodology is unchanged;
+  what changed is what a reviewer should expect a scanner to have already caught.
+  See [security-workflows#65](https://github.com/garymike/security-workflows/pull/65) for the
+  measurements and [security-agents#17](https://github.com/garymike/security-agents/pull/17) for
+  the matching worked-example fix.
+
 ## [0.8.0] - 2026-08-11
 
 ### Added
