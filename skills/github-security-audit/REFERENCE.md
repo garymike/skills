@@ -187,7 +187,7 @@ EOF
 
 `required_signatures: true` enforces GPG/SSH signed commits. Note: returns 403 for private repos on Free plan — do not attempt.
 
-Commits created through the contents API are **unsigned**, so on a repo requiring signatures they cannot be pushed straight to the protected branch. Land them on a side branch and merge through GitHub — the merge or squash commit GitHub creates is signed by its own key and satisfies the rule.
+Commits created through the **contents API are unsigned**, so on a repo requiring signatures they cannot be pushed to the protected branch. A side-branch PR does not rescue them either: GitHub signs the merge commit it writes, but the branch's own commits stay unsigned and the PR is refused with `the base branch policy prohibits the merge` — green checks or not. Use the GraphQL `createCommitOnBranch` mutation instead, which GitHub signs server-side. See [landing signed commits from automation](#landing-signed-commits-from-automation).
 
 ### Add SECURITY.md (free, all repos)
 
@@ -298,6 +298,110 @@ An advisory step that captures command output must use `|| true` — under `bash
 
 ---
 
+## Landing signed commits from automation
+
+A branch requiring signed commits rejects anything `git commit` produces inside Actions, because `GITHUB_TOKEN` is not a signing key. This is not a one-off to force through: a weekly job that pushes a branch produces an unmergeable branch *every week*, which trains whoever is on the other end to treat `--admin` as routine in the repo that guards everything else.
+
+GitHub's GraphQL `createCommitOnBranch` signs server-side. Same token, same `contents: write`, no bot signing key to store or rotate, and the result comes back `Verified` and mergeable with no bypass.
+
+The branch must already exist and `expectedHeadOid` must match its current tip, so reset the ref first to replicate a force-push:
+
+```bash
+gh api repos/<owner>/<repo>/git/refs/heads/<branch> -X PATCH -f sha=$BASE -F force=true
+```
+
+Then commit:
+
+```bash
+gh api graphql --input payload.json --jq '.data.createCommitOnBranch.commit.signature'
+```
+
+`payload.json` holds the query plus `variables.input` with `branch` (`repositoryNameWithOwner` + `branchName`), `expectedHeadOid`, `message` (`headline` + `body`), and `fileChanges.additions[]` as `{path, contents}` with contents base64-encoded. Deletions go in `fileChanges.deletions[]` as `{path}`. The mutation body:
+
+```graphql
+mutation($input: CreateCommitOnBranchInput!) {
+  createCommitOnBranch(input: $input) { commit { oid signature { isValid state } } }
+}
+```
+
+**Always assert the result.** Require `signature.state == "VALID"` and fail otherwise. An unsigned commit cannot merge, and the failure stays invisible until someone tries weeks later.
+
+To prove two branches carry identical content, compare `.commit.tree.sha` — the commit SHAs differ, a three-dot compare still lists every file, but matching trees are conclusive.
+
+## Dependabot alert reality checks
+
+The alert list is the least trustworthy part of a Dependabot setup. Four mechanisms make it understate exposure, and all four have been hit in this estate. **Never report a repo clean on a single `state=open` query.**
+
+### 1. `state=open` is not the whole picture
+
+Alerts live in four states: `open`, `fixed`, `dismissed`, `auto_dismissed`. A `state=open` query returns zero while `auto_dismissed` holds real, unpatched, high-severity advisories — and the default GitHub alerts view hides them too.
+
+```bash
+for st in open auto_dismissed dismissed; do
+  echo "  $st => $(gh api "repos/<owner>/<repo>/dependabot/alerts?state=$st&per_page=100" --jq 'length')"
+done
+```
+
+Treat `dismissed` as a deliberate human decision and leave it alone (read `dismissed_reason`). Treat `auto_dismissed` as a finding until proven otherwise.
+
+### 2. The auto-triage rule's premise is wrong for bundled frontends
+
+GitHub's default auto-triage rule, *dismiss low impact issues for development dependencies*, closes anything at `scope=development`. Its premise is that a dev dependency never reaches production. **That is false for any bundled frontend.** In a SvelteKit, Next.js, Vite or Tauri project the build output ships to users, and the packages that produced it contribute runtime code to that bundle. npm's `devDependency` means build-time *installation*, not absence from the shipped artifact.
+
+A **high**-severity `nanoid` advisory sat auto-dismissed for seven weeks in a SvelteKit + Tauri desktop app on `adapter-static`, alongside `@sveltejs/kit` and `devalue` — the last being SvelteKit's serialization library, which executes in the webview at runtime.
+
+Read `.dependency.scope` on each auto-dismissed alert, then judge against the project's shape rather than the label. There is **no REST API** for auto-triage rules: disabling one is a manual change under Settings → Advanced Security → Dependabot alerts → auto-triage rules, so hand it to the user. Check it per repo — turning it off on one leaves the rest armed.
+
+### 3. A failing updater suppresses alert *creation*
+
+The worst of the four, because the list stays authoritative-looking while it lies. `Dependabot Updates` failing does not merely stop PRs being opened — it stops alerts being created. A single advisory the resolver cannot compute exits the run non-zero and starves the whole cycle.
+
+Observed: a repo displayed **8** open advisories all day. The moment one merge gave the updater a clean rescan, **12 more appeared within seconds**, including a critical. True exposure was 20. That updater had been failing 15 of its last 30 runs for a month.
+
+```bash
+gh run list --repo <owner>/<repo> --workflow "Dependabot Updates" --limit 30 \
+  --json conclusion --jq '[.[]|.conclusion]|group_by(.)|map("\(.[0]):\(length)")|join("  ")'
+```
+
+**A red updater invalidates the alert count.** Report it as a finding in its own right, and never record a repo clean on a count taken while its last updater run failed.
+
+### 4. Merging the PR is not the same as clearing the advisory
+
+A second copy of the package can sit elsewhere in the tree at a hard pin. `mailparser@3.9.23` pins `nodemailer` at exactly `10.0.1` — no caret — so bumping the declared `nodemailer` to 10.0.9 left the transitive copy inside both advisory ranges, and the alert count did not move at all.
+
+Verify by reading the lockfile for resolved versions rather than trusting the merge:
+
+```bash
+gh api "repos/<owner>/<repo>/contents/pnpm-lock.yaml" --jq '.content' | base64 -d \
+  | grep -E "^  (<pkg1>|<pkg2>)@"
+```
+
+### Fixing what Dependabot cannot
+
+**Read the repo's own documented procedure first.** One monorepo records in `pnpm-workspace.yaml` that `pnpm.overrides` is inert in its build and that two historical pins were silently dead because of it. The working fix there is to update the **parent** package until the patched version resolves — which is also the general shape for a transitive advisory.
+
+```bash
+pnpm -r update <transitive-pkg> --lockfile-only                # parent's range already allows the fix
+pnpm -C <workspace-pkg> update <parent-pkg> --lockfile-only    # parent pins it hard
+npm update <pkg> --package-lock-only                           # npm equivalent
+```
+
+Check the parent's declared range before accepting that a fix is unreachable. Dependabot reported `security_update_not_possible` for undici with `latest-resolvable-version: 7.29.0` against a 7.29.1 floor; undici arrived only via `jsdom@29.1.1`, which declares `^7.25.0` and permits it. The diagnosis was simply wrong, and a plain re-resolution fixed it.
+
+### Sequential lockfile merges can silently revert a fix
+
+Several Dependabot PRs touching one lockfile were each generated against an older base. Merging them in quick succession lets a textual auto-merge overwrite a landed fix.
+
+Observed: three npm PRs squash-merged within 14 seconds. The first reverted `adm-zip` to a vulnerable version, five alerts opened, and the later merges happened to restore it — the whole window lasting nine seconds and leaving only a stale notification email. Had the order differed, the revert would have stuck behind a green dashboard.
+
+Merge one at a time and let Dependabot rebase between, or set `required_status_checks.strict=true` so a stale branch must update first. After any such sequence, re-read the lockfile for the expected versions **and** re-query the alerts — the window can open and close in seconds.
+
+### Security updates run without a declared ecosystem; version updates do not
+
+A `dependabot.yml` listing only `github-actions` still receives security PRs for npm or pip, because security updates need no ecosystem entry. Routine version updates do. The effect is that application dependencies never move until an advisory forces them, so every bump arrives as an emergency. Compare declared ecosystems against the manifests actually present and flag the gap.
+
+---
+
 ## Gotchas
 
 - `hasVulnerabilityAlertsEnabled` is not a valid `--json` field in `gh repo list` — use the API endpoint instead
@@ -315,3 +419,9 @@ An advisory step that captures command output must use `|| true` — under `bash
 - Reading Actions job logs needs `--allow-escape-sequences`; strip ANSI with `sed 's/\x1b\[[0-9;]*m//g'`
 - CodeQL's built-in languages are `actions, cpp, csharp, go, java, javascript, python, ruby, rust, swift`. **Shell, PowerShell, Bicep, and Dockerfile are not among them** — do not add a CodeQL workflow for those and call it coverage. `actions` analyses workflow files themselves and is often the only applicable language for an infra repo. Verify against `github/codeql-action` → `src/languages/builtin.json` rather than assuming
 - Dependabot rarely opens a PR for a **transitive** Rust dependency, even with security updates on. Check `Cargo.lock` for the vulnerable crate, confirm the parent's version requirement already allows the patched release, and fix with `cargo update -p <crate> --precise <version>` — a lockfile-only change
+- **Force-resetting a PR branch to its base auto-closes the PR.** Pushing commits afterwards leaves them on the branch but the PR stays `CLOSED` and `gh pr checks` reports "no commit found on the pull request". Either reset and commit as one operation, or `gh pr reopen` after — and re-check the state rather than assuming the push reopened it
+- **`gh api -f` sends every value as a string.** `-f strict=true` is rejected with `422 "true" is not a boolean`; use `-F strict=true` for real booleans and numbers
+- **`core.autocrlf=true` plus the GitHub API will reflow an entire file.** Git converts LF to CRLF on checkout, but the contents API and `createCommitOnBranch` bypass git's smudge/clean filters, so committing the working-copy bytes rewrites every line of an LF-stored file. `git diff` hides this — it normalises, so it still shows a small diff. Compare the local bytes against the actual blob before committing: `gh api "repos/<o>/<r>/contents/<path>" --jq '.content' | base64 -d`, count `\r\n` in both, and normalise to match the blob
+- **Check allowed merge methods before merging.** `gh pr merge --squash` fails with `Squash merges are not allowed on this repository`; read `allow_squash_merge`, `allow_merge_commit` and `allow_rebase_merge` from the repo API and pick one that is enabled
+- **Required status checks can be empty on a repo with extensive CI.** `required_status_checks: null` while CodeQL, Semgrep, Checkov and tests all run means none of them gate a merge. Verify the checks are *configured*, not merely that the workflows exist
+- When choosing which checks to require, prefer jobs with no path or event gating. A job skipped by an `if:` still creates a check run with conclusion `skipped`, which counts as passing; a workflow skipped by a top-level `paths:` filter never creates the check run at all and blocks the PR forever. Exclude anything conditional — a `needs: changes` test job can skip on an unrelated PR

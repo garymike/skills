@@ -6,6 +6,59 @@ All notable changes to this repo are documented here. Versions match the
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-10-02
+
+### Added
+- **github-security-audit: the alert count gets its own scrutiny.** Three new checklist items
+  (all alert states, updater health, declared ecosystems versus manifests present) and a
+  `Dependabot alert reality checks` reference section, because a zero in the alerts list turned
+  out to mean four different things. `state=open` does not return `auto_dismissed`, where a
+  **high**-severity `nanoid` advisory had sat for seven weeks behind GitHub's default
+  *dismiss low impact issues for development dependencies* rule — a rule whose premise, that a
+  dev dependency never reaches production, is false for any bundled frontend, since in a
+  SvelteKit, Next.js, Vite or Tauri project the build output ships to users. Separately, a
+  failing `Dependabot Updates` run stops alerts being **created**, not just PRs being opened:
+  one repo displayed 8 open advisories while the true figure was 20, the other 12 appearing
+  seconds after a merge finally gave the updater a clean rescan. A red updater is a reporting
+  outage, not a patching delay, and it is now a High finding in its own right.
+- **github-security-audit: `Landing signed commits from automation`.** A branch requiring signed
+  commits rejects anything `git commit` produces in Actions, because `GITHUB_TOKEN` is not a
+  signing key — so a weekly job that pushes a branch produces an unmergeable branch every week
+  and makes `--admin` routine. The GraphQL `createCommitOnBranch` mutation signs server-side on
+  the same token and permission, with no bot key to store. Includes the ref-reset step,
+  `expectedHeadOid` handling, the requirement to assert `signature.state == "VALID"`, and
+  comparing `.commit.tree.sha` to prove two branches carry identical content.
+
+### Changed
+- **github-security-audit: corrected the contents-API signing guidance.** The previous text said
+  to land API-created commits on a side branch and merge through GitHub, on the basis that the
+  merge commit is signed. The branch's own commits stay unsigned, so the PR is refused with
+  `the base branch policy prohibits the merge` regardless of how green the checks are. Points at
+  `createCommitOnBranch` instead.
+
+### Fixed
+- **github-security-audit: six gotchas that each cost real time.** Force-resetting a PR branch to
+  its base auto-closes the PR, and commits pushed afterwards land on a closed PR that reports
+  "no commit found". `gh api -f` sends every value as a string, so `-f strict=true` is rejected
+  as not a boolean — use `-F`. `core.autocrlf=true` plus the contents API or
+  `createCommitOnBranch` reflows an entire LF-stored file, and `git diff` hides it by
+  normalising, so local bytes must be compared against the actual blob. `gh pr merge --squash`
+  fails outright where squash is disabled, so read the repo's allowed merge methods first.
+  Required status checks can be empty on a repo with extensive CI, meaning none of it gates a
+  merge. And when choosing checks to require, prefer unconditional jobs: an `if:`-skipped job
+  still creates a check run that counts as passing, while a workflow skipped by a top-level
+  `paths:` filter never creates one and blocks the PR forever.
+- **github-security-audit: how to fix what Dependabot cannot.** Read the repo's own documented
+  procedure first — one monorepo records that `pnpm.overrides` is inert in its build and that two
+  historical pins were silently dead because of it, the working fix being to update the parent
+  package. Check the parent's declared range before accepting `security_update_not_possible`:
+  it was reported for undici against a 7.29.1 floor while the only path in, `jsdom@29.1.1`,
+  declared `^7.25.0` and permitted it. Merging a Dependabot PR also need not clear its advisory,
+  since a second copy can sit at a hard pin (`mailparser@3.9.23` pins `nodemailer` at exactly
+  `10.0.1`), so confirm against the lockfile. And sequential lockfile merges can silently revert
+  a landed fix — three PRs merged inside 14 seconds reverted `adm-zip` to a vulnerable version
+  for a nine-second window that left only a stale email.
+
 ## [0.8.1] - 2026-09-07
 
 ### Changed
