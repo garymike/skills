@@ -32,6 +32,9 @@ Run all checks per active non-fork repo. Run in parallel where possible.
 ### Per-repo automated checks
 - [ ] **Dependabot alerts** enabled (`gh api repos/<owner>/<repo>/vulnerability-alerts`)
 - [ ] **Dependabot auto-fix** enabled (`gh api repos/<owner>/<repo>/automated-security-fixes`)
+- [ ] **Open alerts, all states** — query `open` *and* `auto_dismissed`, never `open` alone. See [alert reality checks](REFERENCE.md#dependabot-alert-reality-checks).
+- [ ] **Dependabot updater health** — check the run conclusions of the `Dependabot Updates` workflow. A failing updater invalidates the alert count.
+- [ ] **Dependabot ecosystems** — compare declared `package-ecosystem` entries against the manifests present. Security updates fire without one; routine version updates do not.
 - [ ] **Secret scanning** — public repos: native (free); private repos: check for gitleaks workflow
 - [ ] **Push protection** — public repos only on free plan (blocks secret commits natively)
 - [ ] **Branch protection** — public repos: check rules; private repos: note Pro required
@@ -53,6 +56,15 @@ Configuration presence is not coverage. Three failure modes hide from a normal g
 - **Schedule-gated jobs are invisible on PRs.** A job behind `if: github.event_name == 'schedule'` never runs on push or pull_request, so green PR checks can sit on top of a scheduled job that has failed every week for a month.
 - **Stale pins rot silently.** A caller pinned to an old SHA keeps running old logic, including bugs the shared workflow has since fixed. Pinning is still correct — but pins need a refresh cadence, and drifting pins fail in the opposite direction from `@main`.
 
+#### Why the alert count needs its own check
+
+The same lesson one level down: a zero in the alerts list is not the same as nothing to find. Four mechanisms make it understate exposure, and all four have been hit here.
+
+- **`state=open` hides `auto_dismissed`.** A high-severity `nanoid` advisory sat auto-dismissed for seven weeks behind a zero-length `state=open` response. The default auto-triage rule closes anything at `scope=development`, on the premise that dev dependencies never reach production — false for any bundled frontend, where the build output ships to users.
+- **A failing updater stops alerts being *created*,** not just PRs being opened. One repo showed 8 open advisories while the true figure was 20; the other 12 appeared seconds after a merge finally gave the updater a clean rescan. A red updater is a reporting outage, not a patching delay.
+- **Merging a Dependabot PR need not clear its advisory.** A second copy can sit at a hard pin elsewhere in the tree, so the count does not move. Confirm against the lockfile, not the merge.
+- **Sequential lockfile merges can revert a landed fix,** silently, in seconds. Merge one at a time or require up-to-date branches.
+
 ### Stale / risky repos
 - [ ] Old public repos with no apparent purpose (archive or make private)
 - [ ] Public forks that are stale (archive)
@@ -69,6 +81,8 @@ One row per active non-fork repo. Columns in this order:
 
 Use ✅ / ❌ / ⚠️ in each cell. Add a short inline note where context helps (e.g. "read-only", "native", "gitleaks", "n/a (Pro)", "mismatch"). Use footnotes (¹ ²) for exceptions that need more explanation. This table is the first thing the user sees.
 
+**Dependabot alerts** is scored on `open` **plus** `auto_dismissed`, and only counts as ✅ when the updater's last run succeeded. Mark ⚠️ with the count where alerts are outstanding, and ❌ where the updater is failing — a zero taken from a red updater is not a zero.
+
 **Workflow health** is scored on the last run of *each* trigger, not the newest run overall. Mark ❌ for `startup_failure` or a failing scheduled run, ⚠️ for a stale pin or a repo whose scheduled run has never fired, ✅ only when both push and schedule are green. Never let a green push run stand in for a scheduled one.
 
 ### Section 2 — Findings by severity
@@ -76,9 +90,11 @@ Use ✅ / ❌ / ⚠️ in each cell. Add a short inline note where context helps
 After the table, list findings grouped under **High**, **Medium**, and **Low** headers. Each finding is a bullet with: what's wrong, which repos are affected, and one-line explanation of impact. Skip a severity group if there are no findings in it.
 
 Severity definitions:
-- **High** — Dependabot off, secrets hardcoded in public repo, 2FA not confirmed, push protection off on public repo, `security.yml` failing at `startup_failure` (present but scanning nothing)
-- **Medium** — No branch protection on public repos, gitleaks missing on private repos, Actions permissions not read-only, unpinned action versions, missing `security.yml` on repos that should have it, scheduled security run failing, caller pinned to a SHA with a known-fixed bug
-- **Low** — Delete-on-merge off, no SECURITY.md, CodeQL not enabled, stale public repos, missing `repo-metadata.yml`, caller pin more than ~4 weeks behind the shared workflow
+- **High** — Dependabot off, secrets hardcoded in public repo, 2FA not confirmed, push protection off on public repo, `security.yml` failing at `startup_failure` (present but scanning nothing), an open or auto-dismissed high/critical advisory, a failing Dependabot updater (the alert count cannot be trusted while it is red)
+- **Medium** — No branch protection on public repos, gitleaks missing on private repos, Actions permissions not read-only, unpinned action versions, missing `security.yml` on repos that should have it, scheduled security run failing, caller pinned to a SHA with a known-fixed bug, auto-triage rule left on for a repo whose build output ships to users, no required status checks on a repo with CI
+- **Low** — Delete-on-merge off, no SECURITY.md, CodeQL not enabled, stale public repos, missing `repo-metadata.yml`, caller pin more than ~4 weeks behind the shared workflow, Dependabot ecosystems missing for manifests that are present (security updates still fire; routine bumps do not)
+
+Report a red Dependabot updater as its own finding, above the alerts it was supposed to raise. Like a broken `security.yml`, it reads as covered on every other check.
 
 Report a broken workflow as its own finding with the failing step named, not as a footnote on the `security.yml` column. "Present but broken" is worse than absent, because it reads as covered on every other check.
 
