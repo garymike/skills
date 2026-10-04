@@ -1,0 +1,68 @@
+name: Release consistency
+
+# Keeps the manifest version, CHANGELOG.md, the tags and the Releases agreeing.
+#
+# CLAUDE.md already required all four. Nothing checked, so it drifted: 0.8.0 and
+# 0.8.1 were bumped, changelogged and merged, then never tagged or released.
+# Tags stopped at v0.7.1 while the manifest read 0.8.1, undetected for two
+# releases because everything a human looks at was green.
+#
+# Two jobs, because the convention is bump-in-PR then tag-after-merge and no
+# single trigger suits both:
+#
+#   consistency  on push and PR. Only what is checkable before the tag exists,
+#                so it can never be red merely for being pre-tag.
+#   released     on a schedule. Asks whether the version on main really got an
+#                annotated tag and a published Release. It is legitimately red
+#                during the gap between merging and tagging, which is why it
+#                does not run on push: a gate that goes red after every merge
+#                regardless of how promptly anyone acts is the cry-wolf signal
+#                .github/dependabot.yml warns about. Weekly is late enough to
+#                mean something and early enough to catch the drift that let two
+#                releases slip.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  schedule:
+    - cron: '0 8 * * 1'   # weekly Monday 08:00 UTC, same as security.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  consistency:
+    name: Manifests, changelog and version ordering
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          # Tags are the released history, and the backwards-version check
+          # compares against them. A shallow clone has none, so the check would
+          # pass silently rather than fail.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check manifests, changelog and version ordering
+        run: bash scripts/check-release-consistency.sh --pr
+
+  released:
+    name: Version on main is tagged and released
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check the tag and Release exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/check-release-consistency.sh --released

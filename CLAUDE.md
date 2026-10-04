@@ -63,3 +63,14 @@ Track releases so the repo history matches the manifest version:
 - Record the change in `CHANGELOG.md` under a new version heading (Keep a Changelog format) in the same commit as the bump.
 - Tag the release commit `vX.Y.Z` (annotated) so `git tag` matches the manifest. Tag on `main` after the change merges, not on a feature branch.
 - Cut a GitHub Release for the tag (`gh release create vX.Y.Z`), reusing that version's `CHANGELOG.md` entry as the notes, so the Releases page mirrors the changelog.
+
+All four of those are checked by `.github/workflows/release-consistency.yml`, because writing them down here was not enough: 0.8.0 and 0.8.1 were bumped, changelogged and merged, then never tagged or released, and tags sat at v0.7.1 while the manifest said 0.8.1 for two releases running. Everything a human looks at was green.
+
+Run it yourself before pushing a bump:
+
+```bash
+bash scripts/check-release-consistency.sh --pr        # manifests agree, changelog entry exists, version moves forward
+bash scripts/check-release-consistency.sh --released  # the version on main really has an annotated tag and a published Release
+```
+
+`--pr` runs on every push and PR. `--released` runs weekly rather than on push, because the convention is bump-in-PR then tag-after-merge, so it is legitimately red in the gap between the two — and a gate that goes red after every merge regardless of how promptly anyone acts is the cry-wolf signal `.github/dependabot.yml` warns about.
