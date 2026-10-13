@@ -46,6 +46,7 @@ Run all checks per active non-fork repo. Run in parallel where possible.
 - [ ] **CodeQL** analysis enabled (free for public repos)
 - [ ] **Sensitive files** in public repos (scan git tree for `.env`, `.pem`, `.key`, credentials)
 - [ ] **Visibility intent** — read `.github/repo-metadata.yml`; compare `visibility:` field against actual repo visibility; flag mismatches as a finding. If file is missing, note it and infer intent from README/description as a fallback. If user has explicitly confirmed visibility, treat as acknowledged.
+- [ ] **Caller shape** — every `security.yml` has a top-level `permissions: contents: read` block, no `secrets: inherit`, and `upload-sarif: false` on private repos. See [the caller shape](REFERENCE.md#add-the-securityyml-caller-free-all-repos).
 - [ ] **Workflow run health** — a repo can have `security.yml` and still be scanning nothing. Check per trigger, not just the newest run. See [workflow run health](REFERENCE.md#workflow-run-health).
 
 #### Why workflow health needs its own check
@@ -54,6 +55,7 @@ Configuration presence is not coverage. Three failure modes hide from a normal g
 
 - **`startup_failure` is silent.** The workflow never starts, so there are no jobs, no logs, and no annotations — just a bare red X that reads like an infra blip. Most often caused by a reusable workflow requesting a permission the caller withheld: the caller's `permissions:` block is a hard ceiling, and GitHub rejects the mismatch before any job runs.
 - **Schedule-gated jobs are invisible on PRs.** A job behind `if: github.event_name == 'schedule'` never runs on push or pull_request, so green PR checks can sit on top of a scheduled job that has failed every week for a month.
+- **A `cancelled` job with zero steps is not a `startup_failure`.** The job existed and was waiting for a runner. Before scoring it, check whether a later schedule run scanned the same SHA green; if so the default branch is covered and it is Low at most.
 - **Stale pins rot silently.** A caller pinned to an old SHA keeps running old logic, including bugs the shared workflow has since fixed. Pinning is still correct — but pins need a refresh cadence, and drifting pins fail in the opposite direction from `@main`.
 
 #### Why the alert count needs its own check
@@ -117,7 +119,7 @@ See [REFERENCE.md](REFERENCE.md) for exact commands for every fix.
 
 When user adds a new repo, check only that repo against the same checklist and apply the same fixes. Don't re-run the full audit unless asked.
 
-Also check whether the new repo was created from `garymike/repo-template`. If not, it will be missing `.github/workflows/security.yml` — offer to add the caller workflow so it hooks into the reusable workflows in `garymike/security-workflows`.
+Also check whether the new repo was created from `garymike/repo-template`. If not, it will be missing `.github/workflows/security.yml` — offer to add the caller workflow so it hooks into the reusable workflows in `garymike/security-workflows`. Use the [caller shape](REFERENCE.md#add-the-securityyml-caller-free-all-repos) in the reference: it must carry a top-level `permissions: contents: read` block, or the `iac-security` job it enables fails the file on its first run (Checkov `CKV2_GHA_1` fires on an absent block, not only on `write-all`).
 
 ## Scheduled routine
 
