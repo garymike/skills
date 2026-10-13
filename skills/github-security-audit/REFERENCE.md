@@ -189,6 +189,72 @@ EOF
 
 Commits created through the **contents API are unsigned**, so on a repo requiring signatures they cannot be pushed to the protected branch. A side-branch PR does not rescue them either: GitHub signs the merge commit it writes, but the branch's own commits stay unsigned and the PR is refused with `the base branch policy prohibits the merge` — green checks or not. Use the GraphQL `createCommitOnBranch` mutation instead, which GitHub signs server-side. See [landing signed commits from automation](#landing-signed-commits-from-automation).
 
+### Add the `security.yml` caller (free, all repos)
+
+Every repo that should be scanned carries `.github/workflows/security.yml`, calling the reusable workflows in `garymike/security-workflows` at a pinned SHA. This is the shape that passes its own scanners:
+
+```yaml
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Required, even though every job below sets its own. See the note after the block.
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    permissions:
+      contents: read
+      packages: read          # the callee pulls the pinned betterleaks image from GHCR
+      pull-requests: read
+    uses: garymike/security-workflows/.github/workflows/security-scan.yml@<SHA> # main @ <date>
+
+  gha-security:
+    permissions:
+      contents: read
+      packages: read
+    uses: garymike/security-workflows/.github/workflows/gha-security.yml@<SHA> # main @ <date>
+
+  sast:                       # drop if Semgrep has no language here (PowerShell, Bicep, README-only)
+    permissions:
+      contents: read
+      packages: read
+      security-events: write  # the callee declares this even when SARIF upload is off
+    uses: garymike/security-workflows/.github/workflows/sast.yml@<SHA> # main @ <date>
+    with:
+      upload-sarif: false     # private repos only: code scanning needs GHAS there
+
+  iac-security:               # drop if the tree has no IaC
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+    uses: garymike/security-workflows/.github/workflows/iac-security.yml@<SHA> # main @ <date>
+    with:
+      upload-sarif: false     # private repos only
+
+  audit:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+    uses: garymike/security-workflows/.github/workflows/security-audit.yml@<SHA> # main @ <date>
+```
+
+**The top-level `permissions:` block is not optional.** Checkov rule `CKV2_GHA_1` is titled *Ensure top-level permissions are not set to write-all*, but it fires when the block is **absent**, not only when it says `write-all`. An absent block means the repository default applies, and Checkov cannot see what that default is, so it fails the file. On 2026-10-12 all eleven callers generated without the block were flagged by the `iac-security` job they had just enabled ([garymike/repo-template#11](https://github.com/garymike/repo-template/pull/11) and ten siblings); a second commit adding the two lines turned every one green. The scanner proved itself on the PR that enabled it, which is the right order, but generating the block up front saves a round trip on every repo.
+
+Keep the top-level block at `contents: read` and let each job raise its own permissions to exactly what its callee declares. The job-level block is the ceiling the callee sees; the top-level block is only the default for jobs that set nothing. Never add `secrets: inherit`; none of the callees need a secret. Pass `upload-sarif: false` on private repos, where code scanning needs GHAS and the upload step would fail; findings stay available as run artifacts.
+
 ### Add SECURITY.md (free, all repos)
 
 Minimal template to commit at `SECURITY.md` in the repo root:
@@ -266,7 +332,29 @@ gh api "repos/<owner>/security-workflows/contents/.github/workflows/security-sca
 
 Compare the reusable workflow's job-level `permissions:` against the caller's. Every permission the callee requests must also appear in the caller — the caller's block is a hard ceiling, and any gap is rejected before a job starts. `packages: read` is the usual culprit, added when a workflow starts pulling an image from GHCR.
 
-### 3. Diagnose a failing job step
+### 3. Tell a `cancelled` job with zero steps from a `startup_failure`
+
+A push run whose `scan` job shows `cancelled` with **no steps** looks like a startup failure at a glance: red, no logs. It is not one. A `startup_failure` has no jobs at all; a cancelled job exists and was waiting for a runner when something killed it. The run-level conclusion from step 1 reads `failure` in this case, not `cancelled`, so the shape only shows at the job level:
+
+```bash
+gh api repos/<owner>/<repo>/actions/runs/<RUN_ID>/jobs \
+  --jq '.jobs[]|{name, conclusion, steps: (.steps|length)}'
+```
+
+Then, before reporting it, check whether a later `schedule` run scanned the same SHA green. Scheduled runs resolve against the default branch, so if the cancelled push was to `main`, the next Monday's run covers exactly that commit:
+
+```bash
+SHA=$(gh run view <RUN_ID> --repo <owner>/<repo> --json headSha --jq .headSha)
+gh run list --repo <owner>/<repo> --workflow Security --event schedule --limit 5 \
+  --json headSha,conclusion,createdAt \
+  --jq ".[]|select(.headSha==\"$SHA\")|\"\(.createdAt) \(.conclusion)\""
+```
+
+If that returns a `success`, the default branch is covered and the cancellation is Low at most. Observed on OpenShows: the 2026-10-05 push run was cancelled with zero steps fifteen minutes after start, and the 2026-10-12 schedule run scanned the same SHA green, so the repo's health column scored ⚠️ with a footnote rather than ❌. If no later run covers the SHA, treat it as a gap and re-run the workflow with `gh run rerun <RUN_ID>`, or dispatch it.
+
+Two causes, told apart by the step count and by what else happened on the ref. The caller sets `cancel-in-progress: true`, so a push superseded by another push to the same ref is cancelled by design: the job has steps, the run-level conclusion reads `cancelled`, and the newer run is the one to score. A job cancelled with **zero** steps, a run-level `failure`, and no successor run on the ref points at runner availability, not at the workflow; if it recurs, that is where to look.
+
+### 4. Diagnose a failing job step
 
 ```bash
 JID=$(gh api repos/<owner>/<repo>/actions/runs/<RUN_ID>/jobs \
@@ -277,15 +365,17 @@ gh api repos/<owner>/<repo>/actions/jobs/$JID/logs --allow-escape-sequences \
 
 Without `--allow-escape-sequences` the call errors out; without the `sed` the output is unreadable.
 
-### 4. Compare pins across callers
+### 5. Compare pins across callers
 
 ```bash
 for r in <repo list>; do
   c=$(gh api repos/$r/contents/.github/workflows/security.yml --jq '.content' 2>/dev/null | base64 -d 2>/dev/null)
   [ -z "$c" ] && { echo "$r | NO security.yml"; continue; }
-  echo "$r | packages:read=$(echo "$c" | grep -c 'packages: read') | ref=$(echo "$c" | grep -oE 'security-scan\.yml@[^ ]+' | head -1 | sed 's/.*@//' | cut -c1-12)"
+  echo "$r | top-perms=$(echo "$c" | grep -cE '^permissions:') | packages:read=$(echo "$c" | grep -c 'packages: read') | ref=$(echo "$c" | grep -oE 'security-scan\.yml@[^ ]+' | head -1 | sed 's/.*@//' | cut -c1-12)"
 done
 ```
+
+`top-perms=0` means the caller has no top-level `permissions:` block and will fail `CKV2_GHA_1` the moment `iac-security` runs on it. Fix it in the same PR as any pin refresh.
 
 Then check whether an old pin predates a known fix in the shared workflow:
 
@@ -323,6 +413,47 @@ mutation($input: CreateCommitOnBranchInput!) {
   createCommitOnBranch(input: $input) { commit { oid signature { isValid state } } }
 }
 ```
+
+### Without jq
+
+The `--jq` flag above is `gh`'s built-in filter and works everywhere, but building `payload.json` is usually shown with `jq`, and Git Bash on Windows ships without it. Build the payload in Python instead, which is on every machine `gh` is, and feed it to `gh api graphql --input -` on stdin:
+
+```python
+import base64, json, subprocess, sys
+
+repo, branch, head, headline, *paths = sys.argv[1:]   # owner/name  branch  expectedHeadOid  "message"  file...
+
+additions = [
+    {"path": p, "contents": base64.b64encode(open(p, "rb").read()).decode()}
+    for p in paths
+]
+payload = {
+    "query": """
+      mutation($input: CreateCommitOnBranchInput!) {
+        createCommitOnBranch(input: $input) { commit { oid signature { isValid state } } }
+      }""",
+    "variables": {"input": {
+        "branch": {"repositoryNameWithOwner": repo, "branchName": branch},
+        "expectedHeadOid": head,
+        "message": {"headline": headline},
+        "fileChanges": {"additions": additions},   # add "deletions": [{"path": ...}] as needed
+    }},
+}
+
+out = subprocess.run(["gh", "api", "graphql", "--input", "-"],
+                     input=json.dumps(payload), text=True, stdout=subprocess.PIPE, check=True)
+commit = json.loads(out.stdout)["data"]["createCommitOnBranch"]["commit"]
+if commit["signature"]["state"] != "VALID":
+    sys.exit(f"commit {commit['oid']} is not signed: {commit['signature']}")
+print(commit["oid"])
+```
+
+```bash
+python sign-commit.py <owner>/<repo> <branch> "$(gh api repos/<owner>/<repo>/git/ref/heads/<branch> --jq .object.sha)" \
+  "ci: restore the dropped scanner jobs" .github/workflows/security.yml SECURITY.md
+```
+
+`path` is the path inside the repo, and the file is read from the same relative path on disk, so run it from the checkout root. `gh` exits non-zero on a GraphQL error and `check=True` surfaces it. The script reads working-copy bytes, so the `core.autocrlf` gotcha below applies: on a Windows checkout, normalise to the blob's line endings before committing, or the commit rewrites every line.
 
 **Always assert the result.** Require `signature.state == "VALID"` and fail otherwise. An unsigned commit cannot merge, and the failure stays invisible until someone tries weeks later.
 
@@ -423,5 +554,7 @@ A `dependabot.yml` listing only `github-actions` still receives security PRs for
 - **`gh api -f` sends every value as a string.** `-f strict=true` is rejected with `422 "true" is not a boolean`; use `-F strict=true` for real booleans and numbers
 - **`core.autocrlf=true` plus the GitHub API will reflow an entire file.** Git converts LF to CRLF on checkout, but the contents API and `createCommitOnBranch` bypass git's smudge/clean filters, so committing the working-copy bytes rewrites every line of an LF-stored file. `git diff` hides this — it normalises, so it still shows a small diff. Compare the local bytes against the actual blob before committing: `gh api "repos/<o>/<r>/contents/<path>" --jq '.content' | base64 -d`, count `\r\n` in both, and normalise to match the blob
 - **Check allowed merge methods before merging.** `gh pr merge --squash` fails with `Squash merges are not allowed on this repository`; read `allow_squash_merge`, `allow_merge_commit` and `allow_rebase_merge` from the repo API and pick one that is enabled
+- **Checkov `CKV2_GHA_1` fires on a missing top-level `permissions:` block, not only on `write-all`.** Every `security.yml` caller needs `permissions: contents: read` at the top level even when every job sets its own. Eleven freshly generated callers failed their own first `iac-security` run on exactly this
+- **A `cancelled` job with zero steps is not a `startup_failure`.** The job existed and was waiting for a runner. Check whether a later schedule run scanned the same SHA green before reporting it; see [workflow run health](#workflow-run-health)
 - **Required status checks can be empty on a repo with extensive CI.** `required_status_checks: null` while CodeQL, Semgrep, Checkov and tests all run means none of them gate a merge. Verify the checks are *configured*, not merely that the workflows exist
 - When choosing which checks to require, prefer jobs with no path or event gating. A job skipped by an `if:` still creates a check run with conclusion `skipped`, which counts as passing; a workflow skipped by a top-level `paths:` filter never creates the check run at all and blocks the PR forever. Exclude anything conditional — a `needs: changes` test job can skip on an unrelated PR
