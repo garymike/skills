@@ -5,4 +5,4 @@
 # The lockfile is the reproducible-install source of truth; these are the
 # direct-dependency declarations. Refresh on a schedule and re-run the evals.
 anthropic==0.116.0
-mcp==1.28.1
+mcp==1.30.0
