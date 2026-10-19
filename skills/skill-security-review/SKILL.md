@@ -1,6 +1,6 @@
 ---
 name: skill-security-review
-description: Assess ANY agent skill (Claude Code / Cursor / Copilot / plugin skill, marketplace or bespoke, local or cloned) as a senior security and AI architect and produce a standardized, risk-rated assessment. Covers BOTH execution surfaces - the agent-execution surface (SKILL.md instructions and the scripts the agent invokes - prompt injection, tool poisoning, memory-file poisoning) AND the developer-execution surface (bundled test files, git hooks, and npm/pip lifecycle scripts that auto-run on npm test / git commit / npm install, outside the agent, with the developer's own permissions - a surface skill scanners cover only partly). Use when someone asks to review, assess, vet, audit, or risk-rate an agent skill, asks is it safe to install skill X, mentions a malicious skill, a test-file or git-hook payload, memory poisoning, or a rug pull in a skill, or wants a skill risk report; covers first-time and re-assessments. Do NOT use to build or modify skills.
+description: Assess ANY agent skill (Claude Code / Cursor / Copilot / plugin skill, marketplace or bespoke, local or cloned) as a senior security and AI architect and produce a standardized, risk-rated assessment. Covers BOTH execution surfaces - the agent-execution surface (SKILL.md instructions and the scripts the agent invokes - prompt injection, tool poisoning, memory-file poisoning) AND the developer-execution surface (bundled test files, git hooks, and npm/pip lifecycle scripts that auto-run on npm test / git commit / npm install, outside the agent, with the developer's own permissions - a surface skill scanners now mostly cover, except a write to persistent agent memory). Use when someone asks to review, assess, vet, audit, or risk-rate an agent skill, asks is it safe to install skill X, mentions a malicious skill, a test-file or git-hook payload, memory poisoning, or a rug pull in a skill, or wants a skill risk report; covers first-time and re-assessments. Do NOT use to build or modify skills.
 ---
 
 # Skill Security Review
@@ -126,12 +126,19 @@ The checklist and scoring cover both surfaces against the field's evidence base:
   bundled-script skills 2.12× more likely), *Cloak and Detonate* (arXiv 2607.02357 — static scanners are evadable,
   dynamic detonation is load-bearing), Snyk *ToxicSkills* (memory-file poisoning, curl|bash, base64-eval), NVIDIA
   **SkillSpector**.
-- **Developer-execution surface:** the **Gecko / VentureBeat** test-file vector (skill-scanner coverage here is
-  carrier-dependent, not advisory: SkillSpector blocks a `.test.ts` payload at 73/100 but clears the same payload
-  class in `.husky/pre-commit` at 28/100, exit 0, having classified the git hook as non-executable, so an
-  exit-code CI gate ships it; `npx skills add` copies the whole directory; test runners + hooks auto-run),
-  Datadog Security Labs (a cloned repo introduces skills without explicit install → re-review on pull), Koi Security
-  **ClawHavoc** (341 malicious skills → SSH/keychain/crypto exfil).
+- **Developer-execution surface:** the **Gecko / VentureBeat** test-file vector (`npx skills add` copies the whole
+  directory; test runners + hooks auto-run). **What to expect a scanner to have caught here, re-measured on
+  SkillSpector v2.13.0:** it blocks the test-file carrier (64/100), the git-hook carrier (76/100) and auto-run
+  agent config (100/100 for `.claude/`, 51/100 for `.cursor/` + `.vscode/`). So a clean SkillSpector run on those
+  carriers is real evidence, not a non-answer. The exception is a **write to persistent agent memory**
+  (`MEMORY.md`, `CLAUDE.md`, `AGENTS.md`): that scores **0/100 `SAFE`, "no security issues detected"** at
+  `Coverage 100.0%`. Only the written bytes are matched against injection patterns, so an inert or
+  runtime-assembled payload scores 0 and a literal injection string reaches just 35/100 — neither blocks. Read
+  memory writes yourself; do not infer anything from a clean scan there. Also unmatched: `.vscode/tasks.json`
+  with `runOn: folderOpen` + `reveal: silent` yields zero findings. Live numbers:
+  [`gate-proof.sh`](https://github.com/garymike/security-workflows/blob/main/tests/gate-proof.sh).
+  Also: Datadog Security Labs (a cloned repo introduces skills without explicit install → re-review on pull),
+  Koi Security **ClawHavoc** (341 malicious skills → SSH/keychain/crypto exfil).
 
 Canonical citations live in
 [security-workflows `docs/references.md`](https://github.com/garymike/security-workflows/blob/main/docs/references.md).

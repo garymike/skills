@@ -6,6 +6,34 @@ All notable changes to this repo are documented here. Versions match the
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.2] - 2026-10-19
+
+### Changed
+- **skill-security-review: re-measured what a scanner has actually already caught.** The previous
+  guidance said skill-scanner coverage of the developer-execution surface was "carrier-dependent",
+  citing SkillSpector blocking a `.test.ts` payload at 73/100 while clearing `.husky/pre-commit` at
+  28/100. That gap closed in SkillSpector v2.11, which added a shebang/mode fallback to its
+  executable classification. Measured on v2.13.0: the test-file carrier blocks at 64/100, the
+  git-hook carrier at 76/100, and auto-run agent config at 100/100 (`.claude/`) and 51/100
+  (`.cursor/` + `.vscode/`).
+
+  This matters for a review skill, because it changes what a clean scan is worth. On those carriers
+  a clean SkillSpector run is now real evidence. The exception is a **write to persistent agent
+  memory**, which scores **0/100 `SAFE`, "no security issues detected"** at `Coverage 100.0%` with
+  the carrying file typed `Executable: Yes`. Holding the mechanism fixed and varying only the
+  payload: 0/100 inert, 35/100 with a literal injection string, against 27/100 for that same string
+  as inert `SKILL.md` prose with no write at all. The write is worth about 8 points of prose
+  matching and nothing blocks, so a runtime-assembled or differently-phrased payload scores like the
+  inert one. The skill now tells reviewers to read memory writes by hand and to infer nothing from a
+  clean scan there. `.vscode/tasks.json` with `runOn: folderOpen` + `reveal: silent` is also still
+  unmatched.
+
+  Corrected in the `description` and the source mapping; the two-surface methodology, checklist and
+  assessment schema are unchanged. See
+  [security-workflows#81](https://github.com/garymike/security-workflows/pull/81) for the
+  measurements and [security-agents#23](https://github.com/garymike/security-agents/pull/23) for the
+  worked example, which moved its target to this carrier for the same reason.
+
 ## [0.9.1] - 2026-10-12
 
 ### Added
