@@ -16,30 +16,30 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: garymike/security-workflows/.github/workflows/security-scan.yml@c1e3f87c3ca70af9d1baa68e98ad589ee387d330 # main @ 2026-10-30
+    uses: garymike/security-workflows/.github/workflows/security-scan.yml@88758762fafad23b762ea8f9e56fd49792920536 # main @ 2026-10-30
 
   gha-security:
     permissions:
       contents: read
       packages: read
-    uses: garymike/security-workflows/.github/workflows/gha-security.yml@c1e3f87c3ca70af9d1baa68e98ad589ee387d330 # main @ 2026-10-30
+    uses: garymike/security-workflows/.github/workflows/gha-security.yml@88758762fafad23b762ea8f9e56fd49792920536 # main @ 2026-10-30
 
   skill-audit:
     permissions:
       contents: read
       packages: read
       security-events: write
-    uses: garymike/security-workflows/.github/workflows/skill-audit.yml@c1e3f87c3ca70af9d1baa68e98ad589ee387d330 # main @ 2026-10-30
+    uses: garymike/security-workflows/.github/workflows/skill-audit.yml@88758762fafad23b762ea8f9e56fd49792920536 # main @ 2026-10-30
 
   sast:
     permissions:
       contents: read
       packages: read
       security-events: write
-    uses: garymike/security-workflows/.github/workflows/sast.yml@c1e3f87c3ca70af9d1baa68e98ad589ee387d330 # main @ 2026-10-30
+    uses: garymike/security-workflows/.github/workflows/sast.yml@88758762fafad23b762ea8f9e56fd49792920536 # main @ 2026-10-30
 
   audit:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
-    uses: garymike/security-workflows/.github/workflows/security-audit.yml@c1e3f87c3ca70af9d1baa68e98ad589ee387d330 # main @ 2026-10-30
+    uses: garymike/security-workflows/.github/workflows/security-audit.yml@88758762fafad23b762ea8f9e56fd49792920536 # main @ 2026-10-30
