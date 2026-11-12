@@ -6,6 +6,17 @@ All notable changes to this repo are documented here. Versions match the
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.4] - 2026-11-12
+
+### Changed
+- **github-security-audit: the 2FA-method check is quarterly, not weekly.** The weekly report
+  carried "2FA method is TOTP or a hardware key, not SMS" as a manual High item every run, and
+  the owner confirmed it on 2026-11-12. A nag that has already been answered trains the reader to
+  skip the whole account-level list. The checklist now says to record the confirmation date in
+  memory and ask again only when it is more than ~90 days old; the severity table scores an
+  unconfirmed method High only at that quarterly check; the report's manual reminder lists OAuth
+  apps, PATs and SSH keys weekly and states when the 2FA check is next due.
+
 ## [0.9.3] - 2026-11-12
 
 ### Changed

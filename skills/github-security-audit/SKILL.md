@@ -23,7 +23,7 @@ Skip archived repos and forks for most checks.
 Run all checks per active non-fork repo. Run in parallel where possible.
 
 ### Identity & access (manual — ask user to verify)
-- [ ] 2FA enabled with TOTP app or hardware key (not SMS) — github.com/settings/security
+- [ ] 2FA method is TOTP or a hardware key, not SMS — github.com/settings/security. **Quarterly, not weekly.** Record the date the owner confirms it in memory and only ask again when the last confirmation is more than ~90 days old; a weekly nag the owner has already answered trains them to skip the whole list.
 - [ ] OAuth apps reviewed and unknown apps revoked — github.com/settings/applications
 - [ ] Personal access tokens audited, unused ones revoked — github.com/settings/tokens
 - [ ] SSH keys scoped to active machines only — github.com/settings/keys
@@ -94,7 +94,7 @@ Use ✅ / ❌ / ⚠️ in each cell. Add a short inline note where context helps
 After the table, list findings grouped under **High**, **Medium**, and **Low** headers. Each finding is a bullet with: what's wrong, which repos are affected, and one-line explanation of impact. Skip a severity group if there are no findings in it.
 
 Severity definitions:
-- **High** — Dependabot off, secrets hardcoded in public repo, 2FA not confirmed, push protection off on public repo, `security.yml` failing at `startup_failure` (present but scanning nothing), an open or auto-dismissed high/critical advisory, a failing Dependabot updater (the alert count cannot be trusted while it is red)
+- **High** — Dependabot off, secrets hardcoded in public repo, 2FA method not confirmed at the quarterly check (never High in between), push protection off on public repo, `security.yml` failing at `startup_failure` (present but scanning nothing), an open or auto-dismissed high/critical advisory, a failing Dependabot updater (the alert count cannot be trusted while it is red)
 - **Medium** — No branch protection on public repos, gitleaks missing on private repos, Actions permissions not read-only, unpinned action versions, missing `security.yml` on repos that should have it, scheduled security run failing, caller pinned to a SHA with a known-fixed bug, auto-triage rule left on for a repo whose build output ships to users, no required status checks on a repo with CI
 - **Low** — Delete-on-merge off, no SECURITY.md, CodeQL not enabled, stale public repos, missing `repo-metadata.yml`, caller pin more than ~4 weeks behind the shared workflow, Dependabot ecosystems missing for manifests that are present (security updates still fire; routine bumps do not)
 
@@ -106,7 +106,7 @@ Report a broken workflow as its own finding with the failing step named, not as 
 
 One row per distinct fix. Columns: **Fix** | **Repos** | **Cost**. Only list free fixes unless the user has pre-approved paid ones. End with a one-line note: "Say the word and I'll batch-apply the free fixes (or a subset)."
 
-Then add the account-level manual reminder (2FA, OAuth apps, PATs, SSH keys) as a brief bulleted list after the table.
+Then add the account-level manual reminder (OAuth apps, PATs, SSH keys) as a brief bulleted list after the table. Include the 2FA method only when the quarterly check is due; otherwise state the date it was last confirmed and when it is next due.
 
 ## Fixing findings
 
@@ -128,7 +128,7 @@ Also check whether the new repo was created from `garymike/repo-template`. If no
 This skill should be run on a weekly schedule to catch:
 - New repos not created from the template (missing `security.yml`)
 - Drift in settings (Dependabot disabled, Actions permissions changed, etc.)
-- Account-level items GHA cannot check (OAuth apps, PATs, SSH keys, 2FA method)
+- Account-level items GHA cannot check (OAuth apps, PATs, SSH keys weekly; 2FA method quarterly)
 
 The scheduled task (`weekly-github-security-audit`) simply invokes this skill — all logic lives here, not in the task prompt.
 
