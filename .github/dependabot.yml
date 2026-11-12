@@ -22,3 +22,16 @@ updates:
     groups:
       github-actions:
         patterns: ["*"]
+
+  # The one Python manifest in the repo: the secure-mcp-builder evaluation harness.
+  # Security updates would arrive without this entry; routine version updates do not,
+  # and without them every bump is an emergency.
+  - package-ecosystem: pip
+    directory: /skills/secure-mcp-builder/scripts
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      pip-minor-patch:
+        update-types: ["minor", "patch"]

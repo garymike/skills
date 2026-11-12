@@ -21,6 +21,7 @@ import html
 import json
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 SEVERITY_ORDER = ["critical", "high", "moderate", "low", "info"]
 SEVERITY_LABEL = {s: s.upper() for s in SEVERITY_ORDER}
@@ -132,6 +133,13 @@ def human(n):
     return str(n)
 
 
+def is_github_url(url: str) -> bool:
+    """True only when the URL's host is github.com itself, not any URL that merely
+    contains the string (``evil.example/github.com``, ``github.com.evil.example``)."""
+    host = (urlparse(url).hostname or "").lower()
+    return host == "github.com" or host == "www.github.com"
+
+
 def source_link_html(meta: dict) -> str:
     url = str(meta.get("source_url") or "").strip()
     if not url:
@@ -140,7 +148,7 @@ def source_link_html(meta: dict) -> str:
     display = base.split("://", 1)[-1].rstrip("/")
     href = base.rstrip("/")
     sha = meta.get("source_commit_sha")
-    if sha and "github.com" in base:
+    if sha and is_github_url(base):
         href = href + "/tree/" + str(sha)
         display += f" @ {str(sha)[:7]}"
     return f'<a class="source" href="{esc(href)}">{esc(display)}</a>'
@@ -620,7 +628,7 @@ def render_md(a: dict) -> str:
     if src:
         link = src if src.startswith(("http://", "https://")) else "https://" + src
         sha = meta.get("source_commit_sha")
-        if sha and "github.com" in link:
+        if sha and is_github_url(link):
             link = link.rstrip("/") + "/tree/" + str(sha)
         L.append(f"Source: <{link}>")
     _plabel, _pbits, _ = provenance_parts(a)
