@@ -60,13 +60,21 @@ gh api repos/<owner>/<repo>/actions/permissions/workflow --jq '{default: .defaul
 
 Scan workflow files for `uses: owner/action@v1` style tags (unpinned). SHA-pinned looks like `uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683`.
 
+List the workflow directory through the **contents API**, then read each file and keep every `uses:` whose ref is not a 40-character hex SHA:
+
 ```bash
-gh api repos/<owner>/<repo>/git/trees/main?recursive=1 \
-  --jq '[.tree[] | select(.path | startswith(".github/workflows/")) | .path]'
-# Then read each file and grep for @v or @main/@master (unpinned)
+for r in <owner>/<repo1> <owner>/<repo2>; do
+  for f in $(gh api "repos/$r/contents/.github/workflows" --jq '.[]|select(.type=="file")|.name' 2>/dev/null); do
+    gh api "repos/$r/contents/.github/workflows/$f" --jq '.content' 2>/dev/null | base64 -d 2>/dev/null \
+      | grep -nE 'uses:\s*[A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+@' | grep -vE '@[0-9a-f]{40}\b' \
+      | sed "s|^|$r/.github/workflows/$f:|"
+  done
+done
 ```
 
-Flag any `@v`, `@main`, or `@master` references. SHA pins are 40-char hex hashes.
+Flag any `@v`, `@main`, `@master` or `@stable` references, including exact tags like `@v4.2.2`: a tag can be moved, a SHA cannot. Local `uses: ./...` paths are not refs and the pattern above skips them.
+
+Do not list the files through the git trees API inside a `--jq` filter. An earlier version of this loop did (`git/trees/HEAD?recursive=1` with a `test("\\.ya?ml$")` filter) and returned **zero hits across 17 repos on two consecutive runs while 14 unpinned refs existed** on one of them; the first run was blamed on a jq escaping error, the second slipped through until a direct per-file grep caught it. Whatever the cause, the contents listing is one call per repo and has no escaping to get wrong.
 
 ### Enable push protection (free on public repos)
 
@@ -306,6 +314,23 @@ gh repo delete <owner>/<repo> --yes
 
 A repo can have `security.yml` and still scan nothing. Check the last run of **each trigger**, not the newest run overall.
 
+### 0. Rule out a platform incident first
+
+When several repos fail the **same trigger inside one window**, do not start by diffing caller permissions. Read GitHub's incident feed for that day:
+
+```bash
+curl -s https://www.githubstatus.com/api/v2/incidents.json | python -I -c '
+import json,sys
+for i in json.load(sys.stdin)["incidents"]:
+    if i["created_at"][:10] in ("<YYYY-MM-DD>",):
+        print(i["created_at"], i["impact"], i["name"])
+        for u in i["incident_updates"][:4]: print("   ", u["created_at"][:16], u["status"], (u["body"] or "")[:160])'
+```
+
+Observed 2026-11-09: five scheduled `Security` runs across five repos and two `Dependabot Updates` runs all started between 18:06 and 18:21 UTC. Three Security runs had **zero jobs** and `gh run view` said "This run likely failed because of a workflow file issue"; two had a partial job list with every listed job green and the `scan` job never materialised. `referenced_workflows` on every run resolved to the pinned SHAs and no caller had changed since its last green run. The feed showed "Incident with Actions and Checks API", impact `critical`, 18:12 to 18:59. That is the same shape as a real `startup_failure` (callee permission mismatch, invalid workflow file), and the only thing that tells them apart is the clustering plus the feed.
+
+If it matches: `gh run rerun <RUN_ID>` the Security runs (it works unattended; score the health column from attempt 2), and note that dynamic `Dependabot Updates` runs answer `This workflow run cannot be retried`; they recover on their next schedule, or sooner on any commit that touches the ecosystem's manifest. Report the cause as the incident, not the caller, and keep the per-trigger table honest about which runs were reruns.
+
 ### 1. Per-trigger status
 
 ```bash
@@ -461,7 +486,7 @@ To prove two branches carry identical content, compare `.commit.tree.sha` — th
 
 ## Dependabot alert reality checks
 
-The alert list is the least trustworthy part of a Dependabot setup. Four mechanisms make it understate exposure, and all four have been hit in this estate. **Never report a repo clean on a single `state=open` query.**
+The alert list is the least trustworthy part of a Dependabot setup. Five mechanisms make it understate exposure, and all five have been hit in this estate. **Never report a repo clean on a single `state=open` query, and never on the list endpoint alone.**
 
 ### 1. `state=open` is not the whole picture
 
@@ -527,6 +552,22 @@ Observed: three npm PRs squash-merged within 14 seconds. The first reverted `adm
 
 Merge one at a time and let Dependabot rebase between, or set `required_status_checks.strict=true` so a stale branch must update first. After any such sequence, re-read the lockfile for the expected versions **and** re-query the alerts — the window can open and close in seconds.
 
+### 5. The list endpoint can omit an open alert
+
+`GET /repos/{o}/{r}/dependabot/alerts` is not guaranteed to return every alert that `GET /repos/{o}/{r}/dependabot/alerts/{n}` does. On `OpenShows`, alert #175 (open, medium, `runtime`, transitive `glob`, GHSA-3g3m-2fjr-6pw4, created 2026-11-02) came back from a direct GET and appeared in the owner's weekly digest email, while **no list query returned it**: `?state=open`, `&per_page=100`, `&ecosystem=npm`, `&package=glob`, `&scope=runtime`, `&manifest=pnpm-lock.yaml`, `&severity=medium`, `&sort=created`, and an unfiltered `?per_page=100` that printed 174, 173, 172 … and skipped 175. The 11-02 and 11-10 reports both counted the repo one alert short because of it, and both wrote "the updater runs a `glob` security job but no alert exists", which was exactly backwards.
+
+After the per-state counts, take the highest alert number seen across all states and probe above it (and into any gap in the numbering below it):
+
+```bash
+MAX=$(gh api "repos/<owner>/<repo>/dependabot/alerts?state=open,fixed,dismissed,auto_dismissed&per_page=100&sort=created&direction=desc" --jq '[.[].number]|max // 0')
+for n in $(seq $((MAX+1)) $((MAX+5))); do
+  gh api "repos/<owner>/<repo>/dependabot/alerts/$n" --jq '"#\(.number) \(.state) \(.security_advisory.severity) \(.dependency.package.name) \(.dependency.scope)"' 2>/dev/null \
+    || echo "#$n: $(gh api "repos/<owner>/<repo>/dependabot/alerts/$n" 2>&1 | grep -oE 'withdrawn|No alert found' || echo other)"
+done
+```
+
+`200` is a hidden alert to score, `410 withdrawn` is an advisory GitHub pulled back (not exposure), `404 No alert found` is past the end. Cross-check against the `Dependabot Updates` run titles too: `npm_and_yarn in /. for glob` with no listed `glob` alert means a hidden one, not an orphan job. Note that `page=` is rejected by this endpoint (`Pagination using the page parameter is not supported`); use `per_page` with `before`/`after` cursors if a state really has more than 100.
+
 ### Security updates run without a declared ecosystem; version updates do not
 
 A `dependabot.yml` listing only `github-actions` still receives security PRs for npm or pip, because security updates need no ecosystem entry. Routine version updates do. The effect is that application dependencies never move until an advisory forces them, so every bump arrives as an emergency. Compare declared ecosystems against the manifests actually present and flag the gap.
@@ -557,4 +598,9 @@ A `dependabot.yml` listing only `github-actions` still receives security PRs for
 - **Checkov `CKV2_GHA_1` fires on a missing top-level `permissions:` block, not only on `write-all`.** Every `security.yml` caller needs `permissions: contents: read` at the top level even when every job sets its own. Eleven freshly generated callers failed their own first `iac-security` run on exactly this
 - **A `cancelled` job with zero steps is not a `startup_failure`.** The job existed and was waiting for a runner. Check whether a later schedule run scanned the same SHA green before reporting it; see [workflow run health](#workflow-run-health)
 - **Required status checks can be empty on a repo with extensive CI.** `required_status_checks: null` while CodeQL, Semgrep, Checkov and tests all run means none of them gate a merge. Verify the checks are *configured*, not merely that the workflows exist
+- **Clustered scheduled failures with zero jobs are a platform incident until the incident feed says otherwise.** Five repos, one trigger, one fifteen-minute window, "likely failed because of a workflow file issue", no caller changed: read `githubstatus.com/api/v2/incidents.json` before diffing permissions. `gh run rerun` fixes the Security runs; Dependabot runs cannot be retried
+- **The alerts list endpoint can omit an open alert.** Probe alert numbers above the highest listed one with direct GETs; a Dependabot security job for a package with no listed alert means a hidden alert, not an orphan job
+- **List workflow files through the contents API, not the trees API, when scanning for unpinned refs.** The trees-based loop returned zero hits on two consecutive runs while 14 unpinned refs existed
+- **The shared `audit` job's annotations are noise at pins before 2026-11-12.** "Dependabot alerts are disabled", "Actions permissions are '{403 json}'", "Delete-branch-on-merge is disabled" and "Branch protection requires GitHub Pro" fired on every repo at every pin because `GITHUB_TOKEN` cannot read those endpoints; the fix makes them notices and reads rulesets first. Score those settings from your own API reads, never from the job
+- **Checkov inline `skip` comments do not close code-scanning alerts.** Checkov honours them when scanning but writes the finding into its SARIF as a result with an `inSource` suppression, which GitHub ignores; two alerts sat open for four months with the skip in place. Use a `skip-check` in `.checkov.yaml` at the repo root (removed from the SARIF entirely), or strip suppressed results before upload
 - When choosing which checks to require, prefer jobs with no path or event gating. A job skipped by an `if:` still creates a check run with conclusion `skipped`, which counts as passing; a workflow skipped by a top-level `paths:` filter never creates the check run at all and blocks the PR forever. Exclude anything conditional — a `needs: changes` test job can skip on an unrelated PR

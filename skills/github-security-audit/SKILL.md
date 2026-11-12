@@ -32,7 +32,7 @@ Run all checks per active non-fork repo. Run in parallel where possible.
 ### Per-repo automated checks
 - [ ] **Dependabot alerts** enabled (`gh api repos/<owner>/<repo>/vulnerability-alerts`)
 - [ ] **Dependabot auto-fix** enabled (`gh api repos/<owner>/<repo>/automated-security-fixes`)
-- [ ] **Open alerts, all states** — query `open` *and* `auto_dismissed`, never `open` alone. See [alert reality checks](REFERENCE.md#dependabot-alert-reality-checks).
+- [ ] **Open alerts, all states** — query `open` *and* `auto_dismissed`, never `open` alone, then probe the alert numbers above the highest one listed with direct GETs: the list endpoint has omitted an open alert under every filter. See [alert reality checks](REFERENCE.md#dependabot-alert-reality-checks).
 - [ ] **Dependabot updater health** — check the run conclusions of the `Dependabot Updates` workflow. A failing updater invalidates the alert count.
 - [ ] **Dependabot ecosystems** — compare declared `package-ecosystem` entries against the manifests present. Security updates fire without one; routine version updates do not.
 - [ ] **Secret scanning** — public repos: native (free); private repos: check for gitleaks workflow
@@ -40,14 +40,14 @@ Run all checks per active non-fork repo. Run in parallel where possible.
 - [ ] **Branch protection** — public repos: check rules; private repos: note Pro required
 - [ ] **Signed commits** enforced on default branch (public repos only on free plan)
 - [ ] **Actions default permissions** set to read-only
-- [ ] **Action version pinning** — scan `.github/workflows/` for unpinned tags
+- [ ] **Action version pinning** — list `.github/workflows/` through the contents API and scan every file for `@tag` refs; the tree-API loop in older versions of this skill returned zero hits estate-wide while 14 unpinned refs existed. See [the scan](REFERENCE.md#check-for-unpinned-actions-in-workflows-free).
 - [ ] **Delete-branch-on-merge** enabled
 - [ ] **SECURITY.md** exists (public repos especially)
 - [ ] **CodeQL** analysis enabled (free for public repos)
 - [ ] **Sensitive files** in public repos (scan git tree for `.env`, `.pem`, `.key`, credentials)
 - [ ] **Visibility intent** — read `.github/repo-metadata.yml`; compare `visibility:` field against actual repo visibility; flag mismatches as a finding. If file is missing, note it and infer intent from README/description as a fallback. If user has explicitly confirmed visibility, treat as acknowledged.
 - [ ] **Caller shape** — every `security.yml` has a top-level `permissions: contents: read` block, no `secrets: inherit`, and `upload-sarif: false` on private repos. See [the caller shape](REFERENCE.md#add-the-securityyml-caller-free-all-repos).
-- [ ] **Workflow run health** — a repo can have `security.yml` and still be scanning nothing. Check per trigger, not just the newest run. See [workflow run health](REFERENCE.md#workflow-run-health).
+- [ ] **Workflow run health** — a repo can have `security.yml` and still be scanning nothing. Check per trigger, not just the newest run, and when several repos fail the same trigger inside one window, check GitHub's incident feed before diagnosing the callers. See [workflow run health](REFERENCE.md#workflow-run-health).
 
 #### Why workflow health needs its own check
 
@@ -57,6 +57,7 @@ Configuration presence is not coverage. Three failure modes hide from a normal g
 - **Schedule-gated jobs are invisible on PRs.** A job behind `if: github.event_name == 'schedule'` never runs on push or pull_request, so green PR checks can sit on top of a scheduled job that has failed every week for a month.
 - **A `cancelled` job with zero steps is not a `startup_failure`.** The job existed and was waiting for a runner. Before scoring it, check whether a later schedule run scanned the same SHA green; if so the default branch is covered and it is Low at most.
 - **Stale pins rot silently.** A caller pinned to an old SHA keeps running old logic, including bugs the shared workflow has since fixed. Pinning is still correct — but pins need a refresh cadence, and drifting pins fail in the opposite direction from `@main`.
+- **A platform incident wears the `startup_failure` costume.** On 2026-11-09 five scheduled runs across five repos failed between 18:06 and 18:21 UTC with zero jobs and `gh run view` saying "likely failed because of a workflow file issue"; two more had a partial job list with every listed job green. No caller had changed. GitHub had a critical Actions incident from 18:12 to 18:59. Clustered failures on one trigger in one window are a reason to read `githubstatus.com/api/v2/incidents.json` before diffing a single permissions block. `gh run rerun` recovers Security runs; dynamic Dependabot runs cannot be retried and recover on their next schedule.
 
 #### Why the alert count needs its own check
 
@@ -66,6 +67,7 @@ The same lesson one level down: a zero in the alerts list is not the same as not
 - **A failing updater stops alerts being *created*,** not just PRs being opened. One repo showed 8 open advisories while the true figure was 20; the other 12 appeared seconds after a merge finally gave the updater a clean rescan. A red updater is a reporting outage, not a patching delay.
 - **Merging a Dependabot PR need not clear its advisory.** A second copy can sit at a hard pin elsewhere in the tree, so the count does not move. Confirm against the lockfile, not the merge.
 - **Sequential lockfile merges can revert a landed fix,** silently, in seconds. Merge one at a time or require up-to-date branches.
+- **The list endpoint can omit an open alert.** An open, medium, runtime `glob` alert on one repo was returned by a direct `GET /dependabot/alerts/175` and by the owner's digest email, but by no list query at all: not `state=open`, not `per_page=100`, not `package=glob`, not an unfiltered list that printed 174, 173, 172 and skipped 175. Two weekly reports counted that repo one short and concluded the updater was running a security job for a package with no alert. After the per-state counts, probe the numbers above the highest one listed with direct GETs.
 
 ### Stale / risky repos
 - [ ] Old public repos with no apparent purpose (archive or make private)

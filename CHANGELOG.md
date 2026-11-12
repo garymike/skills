@@ -6,6 +6,39 @@ All notable changes to this repo are documented here. Versions match the
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.3] - 2026-11-12
+
+### Changed
+- **github-security-audit: three lessons from the 2026-11-10 run, written into the checks they
+  change.** (1) *Workflow health* now starts by ruling out a platform incident: five scheduled
+  runs across five repos failed inside a fifteen-minute window with zero jobs and "likely failed
+  because of a workflow file issue", which is the exact shape of a caller `startup_failure`, and
+  the only thing that told them apart was `githubstatus.com/api/v2/incidents.json` (critical
+  Actions incident, 18:12 to 18:59 UTC). The reference records the shape, the feed command, and
+  that `gh run rerun` recovers Security runs while Dependabot runs cannot be retried. (2) *Alert
+  reality checks* gains a fifth mechanism: the alerts list endpoint omitted an open, medium,
+  runtime alert under every filter while a direct GET by number returned it, so two reports ran
+  one alert short and called the updater's security job orphaned. The checklist now probes the
+  numbers above the highest listed alert. (3) The unpinned-action scan lists workflow files
+  through the contents API; the trees-API loop returned zero hits on two consecutive runs while
+  14 unpinned refs existed.
+- **github-security-audit: two more gotchas.** The shared `audit` job's four settings warnings
+  are noise at pins before 2026-11-12 (`GITHUB_TOKEN` cannot read those endpoints; score from
+  direct API reads), and Checkov inline `skip` comments never close code-scanning alerts because
+  the SARIF carries them as suppressed results GitHub ignores; use `.checkov.yaml`.
+
+### Fixed
+- **mcp-security-review `render_report.py`: GitHub detection by host, not substring.** The
+  `/tree/<sha>` link was added whenever the source URL *contained* `github.com`, so
+  `https://evil.example/github.com/x` qualified (CodeQL `py/incomplete-url-substring-sanitization`
+  ×2). Now `urlparse(...).hostname` must be `github.com` or `www.github.com`.
+- **secure-mcp-builder `evaluation.py`: parse the evaluation XML with `defusedxml`.** The file is
+  an input, and the stdlib parser expands entity bombs and external entities (Semgrep
+  `use-defused-xml-parse`). `defusedxml==0.7.1` added to `scripts/requirements.txt`.
+- **Dependabot version updates for the one Python manifest** (`skills/secure-mcp-builder/scripts`),
+  weekly with a seven-day cooldown, grouped by minor/patch. Security updates fired without it;
+  routine bumps did not.
+
 ## [0.9.2] - 2026-10-19
 
 ### Changed

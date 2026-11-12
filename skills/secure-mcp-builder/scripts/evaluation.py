@@ -15,7 +15,9 @@ import re
 import sys
 import time
 import traceback
-import xml.etree.ElementTree as ET
+# defusedxml, not the stdlib parser: the evaluation file is an input, and the stdlib
+# ElementTree will happily expand entity bombs and external entities in it.
+import defusedxml.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
