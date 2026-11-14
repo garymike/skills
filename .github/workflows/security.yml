@@ -11,35 +11,41 @@ on:
 permissions:
   contents: read
 
+# The five jobs below call reusable workflows from garymike/security-workflows, pinned by
+# commit SHA. Dependabot moves those SHAs, but it only rewrites a trailing version comment
+# when the ref is a tag, so a date written beside a main-tracking SHA goes stale on the next
+# bump and then stays stale: these read "main @ 2026-10-30" while pinned at a 2026-11-12
+# commit. The SHA is the record. Resolve it if you need to know how old a pin is.
+
 jobs:
   scan:
     permissions:
       contents: read
       packages: read
-    uses: garymike/security-workflows/.github/workflows/security-scan.yml@1872a5ef5c5d51aea0b8b08092c04c4f0056ac85 # main @ 2026-10-30
+    uses: garymike/security-workflows/.github/workflows/security-scan.yml@1872a5ef5c5d51aea0b8b08092c04c4f0056ac85 # main
 
   gha-security:
     permissions:
       contents: read
       packages: read
-    uses: garymike/security-workflows/.github/workflows/gha-security.yml@1872a5ef5c5d51aea0b8b08092c04c4f0056ac85 # main @ 2026-10-30
+    uses: garymike/security-workflows/.github/workflows/gha-security.yml@1872a5ef5c5d51aea0b8b08092c04c4f0056ac85 # main
 
   skill-audit:
     permissions:
       contents: read
       packages: read
       security-events: write
-    uses: garymike/security-workflows/.github/workflows/skill-audit.yml@1872a5ef5c5d51aea0b8b08092c04c4f0056ac85 # main @ 2026-10-30
+    uses: garymike/security-workflows/.github/workflows/skill-audit.yml@1872a5ef5c5d51aea0b8b08092c04c4f0056ac85 # main
 
   sast:
     permissions:
       contents: read
       packages: read
       security-events: write
-    uses: garymike/security-workflows/.github/workflows/sast.yml@1872a5ef5c5d51aea0b8b08092c04c4f0056ac85 # main @ 2026-10-30
+    uses: garymike/security-workflows/.github/workflows/sast.yml@1872a5ef5c5d51aea0b8b08092c04c4f0056ac85 # main
 
   audit:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
-    uses: garymike/security-workflows/.github/workflows/security-audit.yml@1872a5ef5c5d51aea0b8b08092c04c4f0056ac85 # main @ 2026-10-30
+    uses: garymike/security-workflows/.github/workflows/security-audit.yml@1872a5ef5c5d51aea0b8b08092c04c4f0056ac85 # main
