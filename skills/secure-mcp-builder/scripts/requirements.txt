@@ -6,4 +6,4 @@
 # direct-dependency declarations. Refresh on a schedule and re-run the evals.
 anthropic==0.116.0
 defusedxml==0.7.1
-mcp==1.30.0
+mcp==2.3.0
